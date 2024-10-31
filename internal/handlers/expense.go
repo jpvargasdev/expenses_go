@@ -11,7 +11,6 @@ import (
   "github.com/gin-gonic/gin"
 )
 
-
 func AddExpenseHandler(c *gin.Context) {
   var expense models.Expense
   if err := c.ShouldBindJSON(&expense); err != nil {

@@ -74,7 +74,10 @@ func createTables() {
   expenseTable := `CREATE TABLE IF NOT EXISTS expenses (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     description TEXT NOT NULL,
-    amount REAL NOT NULL,
+    transaction_amount REAL NOT NULL,
+    transaction_currency TEXT NOT NULL,
+    amount_in_base_currency REAL,
+    exchange_rate REAL,
     main_category TEXT NOT NULL,
     subcategory TEXT NOT NULL,
     date INTEGER NOT NULL,

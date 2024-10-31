@@ -21,6 +21,6 @@ func CreateCategoryHandler(c *gin.Context) {
     c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
     return
   }
-  models.AddCategory(newCategory)
+  models.AddCategory(newCategory) // Add category to storage
   c.JSON(http.StatusCreated, newCategory)
 }
