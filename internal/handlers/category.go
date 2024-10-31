@@ -7,7 +7,7 @@ import (
 )
 
 func GetCategoriesHandler(c *gin.Context) {
-  categories, err := models.GetCategories()
+  categories, err := models.GetCategories() // Fetch categories from storage
   if err != nil {
     c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
     return
