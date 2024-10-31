@@ -1,7 +1,9 @@
 package config
 
 import (
+  "log"
   "os"
+  "github.com/joho/godotenv"
 )
 
 type AppConfig struct {
@@ -12,6 +14,11 @@ type AppConfig struct {
 var Config AppConfig
 
 func Load() {
+  err := godotenv.Load()
+  if err != nil {
+    log.Fatal("Error loading .env file")
+  }
+
   Config.ServerPort = getEnv("SERVER_PORT", "8080")
   Config.ExchangeRate = getEnv("EXCHANGE_RATE_KEY", "")
 }
