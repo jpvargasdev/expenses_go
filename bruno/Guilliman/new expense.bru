@@ -1,0 +1,19 @@
+meta {
+  name: new expense
+  type: http
+  seq: 2
+}
+
+post {
+  url: http://127.0.0.1:8080/add-expense
+  body: json
+  auth: none
+}
+
+body:json {
+  {
+    "description": "coffee",
+    "amount": "2,50",
+    "type": "Savings"
+  }
+}
