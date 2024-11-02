@@ -11,6 +11,8 @@ RUN apk add --no-cache gcc musl-dev
 
 COPY go.mod go.sum ./
 
+RUN go mod init
+
 RUN go mod download
 
 COPY . .
