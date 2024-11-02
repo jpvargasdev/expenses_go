@@ -12,6 +12,9 @@ ENV_VARS = -e EXCHANGE_RATE_API_KEY=$(EXCHANGE_RATE_API_KEY)
 
 all: build run
 
+dev: 
+	docker build -t $(IMAGE_NAME) ./Dockerfile.dev
+
 build:
 	docker build -t $(IMAGE_NAME) .
 

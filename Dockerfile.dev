@@ -25,6 +25,8 @@ RUN apk add --no-cache ca-certificates musl
 
 COPY --from=builder /app/guilliman .
 
+COPY --from=builder /app/.env ./.env
+
 EXPOSE 8080
 
 CMD ["./guilliman"]
