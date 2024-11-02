@@ -4,6 +4,7 @@ import (
 	"time"
   "fmt"
   "log"
+  "database/sql"
 
   "guilliman/internal/utils"
 )
@@ -163,6 +164,24 @@ func AddExpense(expense Expense) error {
   )
   if err != nil {
     return err
+  }
+
+  return nil
+}
+
+func DeleteExpense(id int) error {
+  result, err := db.Exec("DELETE FROM expenses WHERE id = ?", id)
+  if err != nil {
+    return fmt.Errorf("could not delete expense: %v", err)
+  }
+
+  rowsAffected, err := result.RowsAffected()
+  if err != nil {
+    return fmt.Errorf("could not retrieve affected rows: %v", err)
+  }
+
+  if rowsAffected == 0 {
+    return sql.ErrNoRows
   }
 
   return nil

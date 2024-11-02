@@ -1,21 +1,22 @@
 package handlers
 
 import (
-  "time"
-  "net/http"
-  "strconv"
+	"database/sql"
+	"net/http"
+	"strconv"
+	"time"
 
-  "guilliman/internal/utils/timeutils"
-  "guilliman/internal/models"
+	"guilliman/internal/models"
+	"guilliman/internal/utils/timeutils"
 
-  "github.com/gin-gonic/gin"
+	"github.com/gin-gonic/gin"
 )
 
 func AddExpenseHandler(c *gin.Context) {
   var expense models.Expense
   if err := c.ShouldBindJSON(&expense); err != nil {
-      c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
-      return
+    c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+    return
   }
   models.AddExpense(expense)
   c.JSON(http.StatusCreated, expense)
@@ -34,7 +35,7 @@ func GetExpensesForPeriodHandler(c *gin.Context) {
   dateParam := c.Query("date")
   var date time.Time
   if dateParam == "" {
-      date = time.Now()  
+    date = time.Now()  
   } else {
     timestamp, err := strconv.ParseInt(dateParam, 10, 64)
     if err != nil {
@@ -48,9 +49,32 @@ func GetExpensesForPeriodHandler(c *gin.Context) {
 
   expenses, err := models.GetExpensesForPeriod(start, end)
   if err != nil {
-      c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
-      return
+    c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+    return
   }
 
   c.JSON(http.StatusOK, expenses)
 }
+
+func RemoveExpenseHandler(c *gin.Context) {
+  idParam := c.Param("id")
+  id, err := strconv.Atoi(idParam)
+  if err != nil {
+    c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid expense ID"})
+    return
+  }
+
+  err = models.DeleteExpense(id)
+  if err != nil {
+    if err == sql.ErrNoRows {
+      c.JSON(http.StatusNotFound, gin.H{"error": "Expense not found"})
+    } else {
+      c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+    }
+    return
+  }
+
+  c.JSON(http.StatusOK, gin.H{"message": "Expense deleted successfully"})
+
+}
+

@@ -13,6 +13,7 @@ func SetupRouter() *gin.Engine {
 
   router.POST("/add-expense", handlers.AddExpenseHandler)
   router.GET("/expenses", handlers.GetExpensesHandler)
+  router.DELETE("/expenses/:id", handlers.RemoveExpenseHandler)
   router.GET("/expenses/period", handlers.GetExpensesForPeriodHandler)
 
   return router

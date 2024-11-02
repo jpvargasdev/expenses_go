@@ -1,12 +1,9 @@
 package models
 
 import (
-	"errors"
 	"log"
   "fmt"
   "database/sql"
-
-	"github.com/mattn/go-sqlite3"
 )
 
 type Category struct {
@@ -40,9 +37,6 @@ func GetCategories() ([]Category, error) {
 func AddCategory(category Category) (Category, error) {
   result, err := db.Exec("INSERT INTO categories (name) VALUES (?)", category.Name)
   if err != nil {
-    if sqlErr, ok := err.(*sqlite3.Error); ok && sqlErr.Code == sqlite3.ErrConstraint {
-      return Category{}, errors.New("category already exists")
-    }
     return Category{}, err
   }
 
