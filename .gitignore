@@ -24,9 +24,6 @@
 # Go workspace file
 go.work
 
-*.mod
-*.sum
-
 *.log
 *.csv
 **tmp**
