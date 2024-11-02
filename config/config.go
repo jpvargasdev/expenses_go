@@ -8,7 +8,7 @@ import (
 
 type AppConfig struct {
   ServerPort string
-  ExchangeRate string
+  ExchangeRateKey string
 }
 
 var Config AppConfig
@@ -16,11 +16,11 @@ var Config AppConfig
 func Load() {
   err := godotenv.Load()
   if err != nil {
-    log.Fatal("Error loading .env file")
+    log.Println("No .env file found, relying on environment variables")
   }
 
   Config.ServerPort = getEnv("SERVER_PORT", "8080")
-  Config.ExchangeRate = getEnv("EXCHANGE_RATE_KEY", "")
+  Config.ExchangeRateKey = getEnv("EXCHANGE_RATE_KEY", "")
 }
 
 func GetServerPort() string {
@@ -28,7 +28,7 @@ func GetServerPort() string {
 }
 
 func GetExchangeRateKey() string {
-  return Config.ExchangeRate
+  return Config.ExchangeRateKey
 }
 
 func getEnv(key, defaultVal string) string {
