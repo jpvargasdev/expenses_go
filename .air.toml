@@ -1,9 +1,0 @@
-bin = "guilliman"
-
-cmd = "go build main.go"
-
-watch_dir = "."
-
-include_ext = ["go"]
-
-exclude_dir = ["data", "vendor"]
