@@ -16,5 +16,9 @@ func SetupRouter() *gin.Engine {
   router.DELETE("/expenses/:id", handlers.RemoveExpenseHandler)
   router.GET("/expenses/period", handlers.GetExpensesForPeriodHandler)
 
+  router.GET("/incomes", handlers.GetIncomesHandler)
+  router.POST("add-income", handlers.AddIncomeHandler)
+  router.DELETE("/incomes/:id", handlers.RemoveIncomeHandler)
+
   return router
 }

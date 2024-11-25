@@ -12,8 +12,8 @@ import (
 type Expense struct {
   ID                    int     `json:"id"`
   Description           string  `json:"description"`
-  TransactionAmount     float64 `json:"transaction_amount"`        // Amount in transaction currency
-  TransactionCurrency   string  `json:"transaction_currency"`      // Currency code of the transaction
+  Amount                float64 `json:"amount"`        // Amount in transaction currency
+  Currency              string  `json:"currency"`      // Currency code of the transaction
   AmountInBaseCurrency  float64 `json:"amount_in_base_currency"`   // Amount converted to base currency
   ExchangeRate          float64 `json:"exchange_rate"`             // Exchange rate used for conversion
   MainCategory          string  `json:"main_category"`             // Needs, Wants, Savings
@@ -28,8 +28,8 @@ func GetExpenses() ([]Expense, error) {
     SELECT 
       id, 
       description, 
-      transaction_amount, 
-      transaction_currency, 
+      amount, 
+      currency, 
       amount_in_base_currency, 
       exchange_rate, 
       main_category, 
@@ -49,8 +49,8 @@ func GetExpenses() ([]Expense, error) {
     if err := rows.Scan(
       &expense.ID,
       &expense.Description,
-      &expense.TransactionAmount,
-      &expense.TransactionCurrency,
+      &expense.Amount,
+      &expense.Currency,
       &expense.AmountInBaseCurrency,
       &expense.ExchangeRate,
       &expense.MainCategory,
@@ -70,8 +70,8 @@ func GetExpensesForPeriod(start, end int64) ([]Expense, error) {
     SELECT 
       id, 
       description, 
-      transaction_amount, 
-      transaction_currency, 
+      amount, 
+      currency, 
       amount_in_base_currency, 
       exchange_rate, 
       main_category, 
@@ -91,8 +91,8 @@ func GetExpensesForPeriod(start, end int64) ([]Expense, error) {
       if err := rows.Scan(
         &expense.ID, 
         &expense.Description, 
-        &expense.TransactionAmount,
-        &expense.TransactionCurrency,
+        &expense.Amount,
+        &expense.Currency,
         &expense.AmountInBaseCurrency,
         &expense.ExchangeRate,
         &expense.MainCategory,
@@ -124,16 +124,16 @@ func AddExpense(expense Expense) error {
   var exchangeRate float64
   var amountInBaseCurrency float64
 
-  rate, err := utils.GetExchangeRate(expense.TransactionCurrency)
+  rate, err := utils.GetExchangeRate(expense.Currency)
   if err != nil {
     // Log the error but proceed without exchange rate
-    log.Printf("Warning: Exchange rate not found for currency '%s'. Expense will be saved without conversion.", expense.TransactionCurrency)
+    log.Printf("Warning: Exchange rate not found for currency '%s'. Expense will be saved without conversion.", expense.Currency)
     exchangeRate = 0
     amountInBaseCurrency = 0
   } else {
     exchangeRate = rate
     // Convert the transaction amount to the base currency
-    amountInBaseCurrency = expense.TransactionAmount * exchangeRate
+    amountInBaseCurrency = expense.Amount * exchangeRate
   }
 
   expense.ExchangeRate = exchangeRate
@@ -143,8 +143,8 @@ func AddExpense(expense Expense) error {
   _, err = db.Exec(
     `INSERT INTO expenses (
       description,
-      transaction_amount,
-      transaction_currency,
+      amount,
+      currency,
       amount_in_base_currency,
       exchange_rate,
       main_category,
@@ -153,8 +153,8 @@ func AddExpense(expense Expense) error {
       category_id
     ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
     expense.Description,
-    expense.TransactionAmount,
-    expense.TransactionCurrency,
+    expense.Amount,
+    expense.Currency,
     expense.AmountInBaseCurrency, // May be zero or null
     expense.ExchangeRate,         // May be zero or null
     expense.MainCategory,

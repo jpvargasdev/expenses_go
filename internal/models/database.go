@@ -12,18 +12,28 @@ type CategorySeed struct {
 }
 
 // Initial categories and subcategories
-var initialCategories = []CategorySeed{
+var initialCategories = []CategorySeed {
   {"Groceries", "Needs"},
   {"Rent", "Needs"},
   {"Utilities", "Needs"},
   {"Transportation", "Needs"},
+  {"Taxi", "Wants"},
   {"Restaurants", "Wants"},
+  {"Work Lunchs", "Needs"},
   {"Entertainment", "Wants"},
   {"Shopping", "Wants"},
   {"Hobbies", "Wants"},
   {"Emergency Fund", "Savings"},
   {"Investments", "Savings"},
   {"Debt Repayment", "Savings"},
+  {"Short Term", "Savings"},
+  {"Travels", "Savings"},
+  {"Pets", "Needs"},
+  {"Health", "Wants"},
+  {"House Services", "Needs"},
+  {"Streaming Services", "Wants"},
+  {"Leisure ", "Wants"},
+  {"Self Care", "Wants"},
 }
 
 var db *sql.DB
@@ -74,8 +84,8 @@ func createTables() {
   expenseTable := `CREATE TABLE IF NOT EXISTS expenses (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     description TEXT NOT NULL,
-    transaction_amount REAL NOT NULL,
-    transaction_currency TEXT NOT NULL,
+    amount REAL NOT NULL,
+    currency TEXT NOT NULL,
     amount_in_base_currency REAL,
     exchange_rate REAL,
     main_category TEXT NOT NULL,
@@ -83,6 +93,16 @@ func createTables() {
     date INTEGER NOT NULL,
     category_id INTEGER,
     FOREIGN KEY (category_id) REFERENCES categories(id)
+  );`
+
+  incomeTable := `CREATE TABLE IF NOT EXISTS incomes (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    description TEXT NOT NULL,
+    amount REAL NOT NULL,
+    currency TEXT NOT NULL,
+    amount_in_base_currency REAL,
+    exchange_rate REAL,
+    date INTEGER NOT NULL
   );`
 
   _, err := db.Exec(categoryTable)
@@ -94,6 +114,12 @@ func createTables() {
   if err != nil {
     log.Fatalf("Failed to create expenses table: %v", err)
   }
+
+  _, err = db.Exec(incomeTable)
+ if err != nil {
+    log.Fatalf("Failed to create income table: %v", err)
+  }
+
 }
 
 func CloseDatabase() {
@@ -112,6 +138,12 @@ func ClearDatabase() error {
   _, err = db.Exec("DELETE FROM categories")
   if err != nil {
     log.Printf("Error clearing categories table: %v", err)
+    return err
+  }
+
+  _, err = db.Exec("DELETE FROM incomes")
+  if err != nil {
+    log.Printf("Error clearing income table: %v", err)
     return err
   }
 
