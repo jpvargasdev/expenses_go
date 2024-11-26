@@ -1,11 +1,11 @@
 meta {
-  name: new expense
+  name: get incomes
   type: http
-  seq: 2
+  seq: 8
 }
 
-post {
-  url: {{host}}/add-expense
+get {
+  url: {{host}}/incomes
   body: json
   auth: none
 }
@@ -13,8 +13,8 @@ post {
 body:json {
   {
     "description": "Coffee at the park 2",
-    "amount": 100,
+    "transaction_amount": 100,
     "category_id": 1,
-    "currency": "SEK"
+    "transaction_currency": "SEK"
   }
 }
