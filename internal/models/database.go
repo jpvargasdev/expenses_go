@@ -42,6 +42,9 @@ var initialCategories = []CategorySeed{
 	{"Restaurants", "Wants"},
 
 	{"Transfer", "Transfer"},
+	{"Salary", "Income"},
+	{"Interests", "Income"},
+	{"Payments", "Income"},
 }
 
 var db *sql.DB
@@ -103,6 +106,7 @@ func createTables() {
 		account_id INTEGER,                          -- Account from which the transaction is made
 		related_account_id INTEGER,                  -- Account to which the transaction is made (for transfers)
 		transaction_type TEXT NOT NULL,              -- 'Expense', 'Income', 'Savings', 'Transfer'
+		fees INTEGER DEFAULT 0,                      -- Fees associated with the transaction
 		FOREIGN KEY (category_id) REFERENCES categories(id),
 		FOREIGN KEY (account_id) REFERENCES accounts(id),
 		FOREIGN KEY (related_account_id) REFERENCES accounts(id)

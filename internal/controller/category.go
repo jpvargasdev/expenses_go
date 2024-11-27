@@ -2,6 +2,7 @@ package controller
 
 import (
 	"guilliman/internal/models"
+	"log"
 	"net/http"
 
 	"github.com/gin-gonic/gin"
@@ -22,6 +23,12 @@ func (h *Controller) CreateCategoryController(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
-	models.AddCategory(newCategory) // Add category to storage
-	c.JSON(http.StatusCreated, newCategory)
+
+	category, err := models.AddCategory(newCategory) // Add category to storage
+	if err != nil {
+		log.Printf("Error adding category: %v", err)
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to add category"})
+		return
+	}
+	c.JSON(http.StatusCreated, category)
 }

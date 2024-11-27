@@ -21,18 +21,22 @@ type Transaction struct {
 	Description          string  `json:"description"`
 	Amount               float64 `json:"amount"`
 	Currency             string  `json:"currency"`
-	AmountInBaseCurrency float64 `json:"amountInBaseCurrency"`
-	ExchangeRate         float64 `json:"exchangeRate"`
+	AmountInBaseCurrency float64 `json:"amount_in_base_currency"`
+	ExchangeRate         float64 `json:"exchange_rate"`
 	Date                 int64   `json:"date"`
-	MainCategory         string  `json:"mainCategory"`
+	MainCategory         string  `json:"main_category"`
 	Subcategory          string  `json:"subcategory"`
-	CategoryID           int     `json:"categoryID"`
-	AccountID            int     `json:"accountID"`
-	RelatedAccountID     int     `json:"relatedAccountID"`
-	TransactionType      string  `json:"transactionType"`
+	CategoryID           int     `json:"category_id"`
+	AccountID            int     `json:"account_id"`
+	RelatedAccountID     int     `json:"related_account_id"`
+	TransactionType      string  `json:"transaction_type"`
+	Fees                 int     `json:"fees"`
 }
 
-func GetTransactions(transactionType string, accountId string) ([]Transaction, error) {
+type TransactionWithFee struct {
+}
+
+func GetTransactions(transactionType string, accountId int) ([]Transaction, error) {
 	query := `SELECT 
 	  id,	
 	  description,	
@@ -57,7 +61,7 @@ func GetTransactions(transactionType string, accountId string) ([]Transaction, e
 		args = append(args, transactionType)
 	}
 
-	if accountId != "" {
+	if accountId > 0 {
 		conditions = append(conditions, "account_id = ?")
 		args = append(args, accountId)
 	}
@@ -98,7 +102,7 @@ func GetTransactions(transactionType string, accountId string) ([]Transaction, e
 	return transactions, nil
 }
 
-func GetTransactionsForPeriod(start int64, end int64, transactionType string, accountId string) ([]Transaction, error) {
+func GetTransactionsForPeriod(start int64, end int64, transactionType string, accountId int) ([]Transaction, error) {
 	query := `SELECT 
 	  id,	
 	  description,	
@@ -123,7 +127,7 @@ func GetTransactionsForPeriod(start int64, end int64, transactionType string, ac
 		args = append(args, transactionType)
 	}
 
-	if accountId != "" {
+	if accountId > 0 {
 		conditions = append(conditions, "account_id = ?")
 		args = append(args, accountId)
 	}
@@ -169,6 +173,17 @@ func GetTransactionsForPeriod(start int64, end int64, transactionType string, ac
 * Can add TransactionType = "expense", "income"
  */
 func AddTransaction(transaction Transaction) (Transaction, error) {
+	sourceAccount, err := GetAccountByID(transaction.AccountID)
+	if err != nil {
+		return Transaction{}, fmt.Errorf("invalid account: %v", err)
+	}
+
+	if transaction.TransactionType == TransactionTypeExpense {
+		if sourceAccount.Balance < transaction.Amount {
+			return Transaction{}, fmt.Errorf("insufficient balance in account: %v", err)
+		}
+	}
+
 	// Determine the main category based on the subcategory
 	mainCategory, err := GetMainCategory(transaction.CategoryID)
 	if err != nil {
@@ -198,21 +213,6 @@ func AddTransaction(transaction Transaction) (Transaction, error) {
 		exchangeRate = rate
 		// Convert the transaction amount to the base currency
 		amountInBaseCurrency = transaction.Amount * exchangeRate
-	}
-
-	// If transaction type is expense, amount must be negative
-	// Check account balance
-	if transaction.TransactionType == TransactionTypeExpense &&
-		transaction.TransactionType == TransactionTypeTransfer {
-		sourceAccount, err := GetAccountByID(transaction.AccountID)
-		if err != nil {
-			return Transaction{}, fmt.Errorf("invalid account: %v", err)
-		}
-		if sourceAccount.Balance < transaction.Amount {
-			return Transaction{}, fmt.Errorf("insufficient balance in account: %v", err)
-		}
-
-		transaction.Amount = -transaction.Amount
 	}
 
 	transaction.ExchangeRate = exchangeRate
@@ -289,6 +289,39 @@ func AddTransaction(transaction Transaction) (Transaction, error) {
 * Can add TransactionType = "transfer" "savings"
  */
 func AddTransfer(transaction Transaction) (Transaction, error) {
+	mainCategory, err := GetMainCategory(transaction.CategoryID)
+	if err != nil {
+		return Transaction{}, fmt.Errorf("invalid subcategory: %v", err)
+	}
+	subcategory, err := GetSubCategory(transaction.CategoryID)
+	if err != nil {
+		return Transaction{}, fmt.Errorf("invalid subcategory: %v", err)
+	}
+	transaction.MainCategory = mainCategory
+	transaction.Subcategory = subcategory
+
+	if transaction.Date == 0 {
+		transaction.Date = time.Now().Unix()
+	}
+
+	var exchangeRate float64
+	var amountInBaseCurrency float64
+
+	rate, err := utils.GetExchangeRate(transaction.Currency)
+	if err != nil {
+		// Log the error but proceed without exchange rate
+		log.Printf("Warning: Exchange rate not found for currency '%s'. Transaction will be saved without conversion.", transaction.Currency)
+		exchangeRate = 0
+		amountInBaseCurrency = 0
+	} else {
+		exchangeRate = rate
+		// Convert the transaction amount to the base currency
+		amountInBaseCurrency = transaction.Amount * exchangeRate
+	}
+
+	transaction.ExchangeRate = exchangeRate
+	transaction.AmountInBaseCurrency = amountInBaseCurrency
+
 	tx, err := db.Begin()
 	if err != nil {
 		return Transaction{}, fmt.Errorf("failed to start database transaction: %v", err)
@@ -314,8 +347,9 @@ func AddTransfer(transaction Transaction) (Transaction, error) {
 		  category_id,
 		  account_id,
 		  related_account_id,
-		  transaction_type
-		) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+		  transaction_type,
+		  fees
+		) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
 		transaction.Description,
 		transaction.Amount,
 		transaction.Currency,
@@ -328,6 +362,7 @@ func AddTransfer(transaction Transaction) (Transaction, error) {
 		transaction.AccountID,
 		transaction.RelatedAccountID,
 		transaction.TransactionType,
+		transaction.Fees,
 	)
 	if err != nil {
 		tx.Rollback()
@@ -336,8 +371,8 @@ func AddTransfer(transaction Transaction) (Transaction, error) {
 
 	// Update the account balance for the source account
 	_, err = tx.Exec(
-		`UPDATE accounts SET balance = balance + ? WHERE id = ?`,
-		transaction.Amount, transaction.AccountID,
+		`UPDATE accounts SET balance = balance - (? + ?) WHERE id = ?`,
+		transaction.Amount, transaction.Fees, transaction.AccountID,
 	)
 
 	if err != nil {
@@ -347,8 +382,8 @@ func AddTransfer(transaction Transaction) (Transaction, error) {
 
 	// Update the account balance for the destination account
 	_, err = tx.Exec(
-		`UPDATE accounts SET balance = balance - ? WHERE id = ?`,
-		transaction.Amount, transaction.RelatedAccountID,
+		`UPDATE accounts SET balance = balance + (? + ?) WHERE id = ?`,
+		transaction.Amount, transaction.Fees, transaction.RelatedAccountID,
 	)
 
 	if err != nil {
@@ -366,18 +401,81 @@ func AddTransfer(transaction Transaction) (Transaction, error) {
 }
 
 func DeleteTransaction(id int) error {
-	result, err := db.Exec("DELETE FROM transactions WHERE id = ?", id)
+	// Start a database transaction
+	tx, err := db.Begin()
 	if err != nil {
-		return fmt.Errorf("could not delete transaction: %v", err)
+		return fmt.Errorf("failed to start database transaction: %v", err)
+	}
+	defer func() {
+		if r := recover(); r != nil {
+			tx.Rollback()
+			log.Printf("Recovered from panic: %v", r)
+		}
+	}()
+
+	// Fetch the transaction details to retrieve its amount and account ID
+	var transaction struct {
+		Amount           float64
+		AccountID        int
+		RelatedAccountID int // For transfers
+		TransactionType  string
+		Fees             int
 	}
 
-	rowsAffected, err := result.RowsAffected()
-	if err != nil {
-		return fmt.Errorf("could not retrieve affected rows: %v", err)
+	err = tx.QueryRow(
+		`SELECT amount, account_id, related_account_id, transaction_type, fees
+		 FROM transactions 
+		 WHERE id = ?`, id,
+	).Scan(
+		&transaction.Amount,
+		&transaction.AccountID,
+		&transaction.RelatedAccountID,
+		&transaction.TransactionType,
+		&transaction.Fees,
+	)
+
+	if err == sql.ErrNoRows {
+		tx.Rollback()
+		return fmt.Errorf("transaction with ID %d not found", id)
+	} else if err != nil {
+		tx.Rollback()
+		return fmt.Errorf("failed to retrieve transaction: %v", err)
 	}
 
-	if rowsAffected == 0 {
-		return sql.ErrNoRows
+	// Reverse the balance change for the source account
+	_, err = tx.Exec(
+		`UPDATE accounts SET balance = balance + (? + ?) WHERE id = ?`,
+		transaction.Amount, transaction.Fees, transaction.AccountID,
+	)
+	if err != nil {
+		tx.Rollback()
+		return fmt.Errorf("failed to update source account balance: %v", err)
+	}
+
+	// If the transaction is a transfer, update the related account balance as well
+	if transaction.TransactionType == TransactionTypeTransfer ||
+		transaction.TransactionType == TransactionTypeSavings &&
+			transaction.RelatedAccountID > 0 {
+		_, err = tx.Exec(
+			`UPDATE accounts SET balance = balance - (? + ?) WHERE id = ?`,
+			transaction.Amount, transaction.Fees, transaction.RelatedAccountID,
+		)
+		if err != nil {
+			tx.Rollback()
+			return fmt.Errorf("failed to update destination account balance: %v", err)
+		}
+	}
+
+	// Delete the transaction
+	_, err = tx.Exec(`DELETE FROM transactions WHERE id = ?`, id)
+	if err != nil {
+		tx.Rollback()
+		return fmt.Errorf("failed to delete transaction: %v", err)
+	}
+
+	// Commit the transaction
+	if err := tx.Commit(); err != nil {
+		return fmt.Errorf("failed to commit database transaction: %v", err)
 	}
 
 	return nil

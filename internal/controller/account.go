@@ -4,6 +4,7 @@ import (
 	"guilliman/internal/models"
 	"log"
 	"net/http"
+	"strconv"
 
 	"github.com/gin-gonic/gin"
 )
@@ -46,4 +47,22 @@ func (h *Controller) AddAccountController(c *gin.Context) {
 		return
 	}
 	c.JSON(http.StatusCreated, account)
+}
+
+func (h *Controller) DeleteAccountController(c *gin.Context) {
+	idParam := c.Param("id")
+	id, err := strconv.Atoi(idParam)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid account ID"})
+		return
+	}
+
+	account, err := models.DeleteAccount(id) // Add account to storage
+	if err != nil {
+		// You can log the error or return it, depending on your application's needs
+		log.Printf("Error adding account: %v", err)
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to delete acccount"})
+		return
+	}
+	c.JSON(http.StatusOK, account)
 }

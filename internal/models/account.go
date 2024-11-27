@@ -119,3 +119,23 @@ func UpdateAccount(account Account) (Account, error) {
 
 	return account, nil
 }
+
+func DeleteAccount(id int) (Account, error) {
+	query := "DELETE FROM accounts WHERE id = ?"
+
+	result, err := db.Exec(query, id)
+	if err != nil {
+		return Account{}, err
+	}
+
+	rowsAffected, err := result.RowsAffected()
+	if err != nil {
+		return Account{}, err
+	}
+
+	if rowsAffected == 0 {
+		return Account{}, fmt.Errorf("no account found with ID %d", id)
+	}
+
+	return Account{ID: id}, nil
+}

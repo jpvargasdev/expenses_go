@@ -1,0 +1,18 @@
+meta {
+  name: new category
+  type: http
+  seq: 2
+}
+
+post {
+  url: {{host}}/api/v1/categories
+  body: json
+  auth: none
+}
+
+body:json {
+  {
+    "name": "Family Expenses",
+    "main_category": "Needs"
+  }
+}

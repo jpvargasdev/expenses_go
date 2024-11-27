@@ -1,0 +1,22 @@
+meta {
+  name: New expense
+  type: http
+  seq: 4
+}
+
+post {
+  url: {{host}}/api/v1/transactions
+  body: json
+  auth: none
+}
+
+body:json {
+  {
+      "description": "Lunch SEB",
+      "amount": -100,
+      "currency": "SEK",
+      "category_id": 24,
+      "account_id": 1,
+      "transaction_type": "expense"
+  }
+}

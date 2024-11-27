@@ -16,6 +16,7 @@ import (
 func (h *Controller) GetTransactionsController(c *gin.Context) {
 	typeParam := c.Query("type")
 	accountParam := c.Query("account")
+	accountId, _ := strconv.Atoi(accountParam)
 
 	// check transaction type is valid or empty
 	if typeParam != models.TransactionTypeExpense &&
@@ -27,7 +28,7 @@ func (h *Controller) GetTransactionsController(c *gin.Context) {
 		return
 	}
 
-	transactions, err := models.GetTransactions(typeParam, accountParam)
+	transactions, err := models.GetTransactions(typeParam, accountId)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
@@ -76,6 +77,7 @@ func (h *Controller) GetTransactionsForPeriodController(c *gin.Context) {
 	dateParam := c.Query("date")
 	typeParam := c.Query("type")
 	accountParam := c.Query("account")
+	accountId, _ := strconv.Atoi(accountParam)
 
 	// check transaction type is valid or empty
 	if typeParam != models.TransactionTypeExpense &&
@@ -101,7 +103,7 @@ func (h *Controller) GetTransactionsForPeriodController(c *gin.Context) {
 
 	startTimestamp, endTimestamp := timeutils.CalculatePeriodBoundaries(date)
 
-	expenses, err := models.GetTransactionsForPeriod(startTimestamp, endTimestamp, typeParam, accountParam)
+	expenses, err := models.GetTransactionsForPeriod(startTimestamp, endTimestamp, typeParam, accountId)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
@@ -113,6 +115,7 @@ func (h *Controller) GetTransactionsForPeriodController(c *gin.Context) {
 func (h *Controller) GetTransactionsMonthlyController(c *gin.Context) {
 	typeParam := c.Query("type")
 	accountParam := c.Query("account")
+	accountId, _ := strconv.Atoi(accountParam)
 
 	// check transaction type is valid or empty
 	if typeParam != models.TransactionTypeExpense &&
@@ -128,7 +131,7 @@ func (h *Controller) GetTransactionsMonthlyController(c *gin.Context) {
 	startTimestamp := startDate.Unix()
 	endTimestamp := endDate.Unix()
 
-	expenses, err := models.GetTransactionsForPeriod(startTimestamp, endTimestamp, typeParam, accountParam)
+	expenses, err := models.GetTransactionsForPeriod(startTimestamp, endTimestamp, typeParam, accountId)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return

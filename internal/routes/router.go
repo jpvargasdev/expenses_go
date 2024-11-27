@@ -26,7 +26,7 @@ func SetupRouter() *gin.Engine {
 			accounts.GET("", c.GetAccountsController)
 			accounts.POST("", c.AddAccountController)
 			// accounts.PUT("/accounts/:id", c.UpdateAccountController)
-			// accounts.DELETE("/accounts/:id", c.DeleteAccountController)
+			accounts.DELETE(":id", c.DeleteAccountController)
 		}
 		transactions := v1.Group("/transactions")
 		{

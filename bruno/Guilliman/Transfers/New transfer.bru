@@ -1,0 +1,23 @@
+meta {
+  name: New transfer
+  type: http
+  seq: 2
+}
+
+post {
+  url: {{host}}/api/v1/transfers
+  body: json
+  auth: none
+}
+
+body:json {
+  {
+      "description": "Monthly Savings Transfer",
+      "amount": 100.00,
+      "currency": "SEK",
+      "category_id": 5,
+      "account_id": 1,
+      "related_account_id": 2,
+      "transaction_type": "transfer"
+  }
+}

@@ -1,0 +1,22 @@
+meta {
+  name: New income
+  type: http
+  seq: 2
+}
+
+post {
+  url: {{host}}/api/v1/transactions
+  body: json
+  auth: none
+}
+
+body:json {
+  {
+      "description": "Salary November",
+      "amount": 40000,
+      "currency": "SEK",
+      "category_id": 26,
+      "account_id": 1,
+      "transaction_type": "income"
+  }
+}
