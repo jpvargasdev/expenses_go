@@ -142,8 +142,7 @@ func AddExpense(expense Expense) (Expense, error) {
 	expense.AmountInBaseCurrency = amountInBaseCurrency
 
 	// Insert the expense into the database
-	_, err = db.Exec(
-		`INSERT INTO expenses (
+	_, err = db.Exec(`INSERT INTO expenses (
       description,
       amount,
       currency,

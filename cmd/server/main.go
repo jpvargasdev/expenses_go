@@ -1,43 +1,59 @@
 package main
 
 import (
-  "guilliman/config"
-  "guilliman/internal/models"
-  "guilliman/internal/routes"
-  "fmt"
-  "log"
-  "os"
-  "os/signal"
-  "syscall"
+	"fmt"
+	"guilliman/config"
+	"guilliman/internal/models"
+	"guilliman/internal/routes"
+	"log"
+	"os"
+	"os/signal"
+	"syscall"
 )
 
+// @title           Guilliman API
+// @version         1.0
+// @description     This is the Guilliman API
+
+// @contact.name   Juan Vargas
+// @contact.url    https://github.com/jpvargasdev/guilliman
+
+// @license.name  Apache 2.0
+// @license.url   http://www.apache.org/licenses/LICENSE-2.0.html
+
+// @host      localhost:8080
+// @BasePath  /api/v1
+
+// @securityDefinitions.basic  BasicAuth
+
+// @externalDocs.description  OpenAPI
 func main() {
-  config.Load()
+	config.Load()
 
-  models.InitializeDatabase()
-  defer models.CloseDatabase()
+	models.InitializeDatabase()
+	defer models.CloseDatabase()
 
-  quit := make(chan os.Signal, 1)
-    signal.Notify(quit, os.Interrupt, syscall.SIGTERM)
-    go func() {
-      <-quit
-      fmt.Println("\nShutting down server...")
-      models.CloseDatabase()
-      os.Exit(0)
-    }()
+	quit := make(chan os.Signal, 1)
+	signal.Notify(quit, os.Interrupt, syscall.SIGTERM)
+	go func() {
+		<-quit
+		fmt.Println("\nShutting down server...")
+		models.CloseDatabase()
+		os.Exit(0)
+	}()
 
-  // Seed the database with initial categories
-  if err := models.SeedCategories(); err != nil {
-    log.Fatalf("Failed to seed categories: %v", err)
-  }
+	// Seed the database with initial categories
+	if err := models.SeedCategories(); err != nil {
+		log.Fatalf("Failed to seed categories: %v", err)
+	}
 
-  router := routes.SetupRouter()
+	router := routes.SetupRouter()
 
-  port := config.GetServerPort()
+	port := config.GetServerPort()
 
-  fmt.Printf("Guilliman server is running on port %s...\n", port)
+	fmt.Printf("Guilliman server is running on port %s...\n", port)
 
-  if err := router.Run(":" + port); err != nil {
-    log.Fatalf("Error starting Guilliman server: %v", err)
-  }
+	if err := router.Run(":" + port); err != nil {
+		log.Fatalf("Error starting Guilliman server: %v", err)
+	}
 }

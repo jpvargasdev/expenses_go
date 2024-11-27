@@ -14,27 +14,34 @@ type CategorySeed struct {
 
 // Initial categories and subcategories
 var initialCategories = []CategorySeed{
-	{"Groceries", "Needs"},
-	{"Rent", "Needs"},
-	{"Utilities", "Needs"},
-	{"Transportation", "Needs"},
-	{"Taxi", "Wants"},
-	{"Restaurants", "Wants"},
-	{"Work Lunchs", "Needs"},
-	{"Entertainment", "Wants"},
-	{"Shopping", "Wants"},
-	{"Hobbies", "Wants"},
 	{"Emergency Fund", "Savings"},
 	{"Investments", "Savings"},
 	{"Debt Repayment", "Savings"},
 	{"Short Term", "Savings"},
 	{"Travels", "Savings"},
+	{"Savings", "Savings"},
+	{"Interests Earned", "Savings"},
+
 	{"Pets", "Needs"},
-	{"Health", "Wants"},
 	{"House Services", "Needs"},
+	{"Bank Fees", "Needs"},
+	{"Groceries", "Needs"},
+	{"Rent", "Needs"},
+	{"Utilities", "Needs"},
+	{"Transportation", "Needs"},
+	{"Work Lunchs", "Needs"},
+
 	{"Streaming Services", "Wants"},
+	{"Health", "Wants"},
 	{"Leisure ", "Wants"},
 	{"Self Care", "Wants"},
+	{"Entertainment", "Wants"},
+	{"Shopping", "Wants"},
+	{"Hobbies", "Wants"},
+	{"Taxi", "Wants"},
+	{"Restaurants", "Wants"},
+
+	{"Transfer", "Transfer"},
 }
 
 var db *sql.DB
@@ -77,48 +84,51 @@ func SeedCategories() error {
 
 func createTables() {
 	categoryTable := `CREATE TABLE IF NOT EXISTS categories (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    name TEXT UNIQUE NOT NULL,         -- Name of the subcategory
-    main_category TEXT NOT NULL        -- Main category (Needs, Wants, Savings)
-  );`
+		id INTEGER PRIMARY KEY AUTOINCREMENT,
+		name TEXT UNIQUE NOT NULL,         -- Name of the subcategory
+		main_category TEXT NOT NULL        -- Main category (Needs, Wants, Savings, Transfer)
+	);`
 
-	expenseTable := `CREATE TABLE IF NOT EXISTS expenses (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    description TEXT NOT NULL,
-    amount REAL NOT NULL,
-    currency TEXT NOT NULL,
-    amount_in_base_currency REAL,
-    exchange_rate REAL,
-    main_category TEXT NOT NULL,
-    subcategory TEXT NOT NULL,
-    date INTEGER NOT NULL,
-    category_id INTEGER,
-    FOREIGN KEY (category_id) REFERENCES categories(id)
-  );`
+	transactionsTable := `CREATE TABLE IF NOT EXISTS transactions (
+		id INTEGER PRIMARY KEY AUTOINCREMENT,
+		description TEXT NOT NULL,
+		amount REAL NOT NULL,                        -- Positive for income, negative for expenses
+		currency TEXT NOT NULL,
+		amount_in_base_currency REAL,
+		exchange_rate REAL,
+		date INTEGER NOT NULL,
+		main_category TEXT NOT NULL,                 -- Needs, Wants, Savings
+		subcategory TEXT NOT NULL,                   -- Name of the subcategory
+		category_id INTEGER,
+		account_id INTEGER,                          -- Account from which the transaction is made
+		related_account_id INTEGER,                  -- Account to which the transaction is made (for transfers)
+		transaction_type TEXT NOT NULL,              -- 'Expense', 'Income', 'Savings', 'Transfer'
+		FOREIGN KEY (category_id) REFERENCES categories(id),
+		FOREIGN KEY (account_id) REFERENCES accounts(id),
+		FOREIGN KEY (related_account_id) REFERENCES accounts(id)
+	);`
 
-	incomeTable := `CREATE TABLE IF NOT EXISTS incomes (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    description TEXT NOT NULL,
-    amount REAL NOT NULL,
-    currency TEXT NOT NULL,
-    amount_in_base_currency REAL,
-    exchange_rate REAL,
-    date INTEGER NOT NULL
-  );`
+	accountsTable := `CREATE TABLE IF NOT EXISTS accounts (
+		id INTEGER PRIMARY KEY AUTOINCREMENT,
+		name TEXT UNIQUE NOT NULL,   -- Name of the account (e.g., "Checking Account", "Credit Card")
+		type TEXT NOT NULL,          -- Type of account (e.g., "Bank", "Credit Card", "Cash")
+		currency TEXT NOT NULL,      -- Currency of the account (e.g., "USD", "EUR")
+		balance REAL DEFAULT 0       -- Current balance of the account (optional)
+	);`
 
 	_, err := db.Exec(categoryTable)
 	if err != nil {
 		log.Fatalf("Failed to create categories table: %v", err)
 	}
 
-	_, err = db.Exec(expenseTable)
+	_, err = db.Exec(transactionsTable)
 	if err != nil {
-		log.Fatalf("Failed to create expenses table: %v", err)
+		log.Fatalf("Failed to create transactions table: %v", err)
 	}
 
-	_, err = db.Exec(incomeTable)
+	_, err = db.Exec(accountsTable)
 	if err != nil {
-		log.Fatalf("Failed to create income table: %v", err)
+		log.Fatalf("Failed to create accounts table: %v", err)
 	}
 
 }
@@ -130,9 +140,9 @@ func CloseDatabase() {
 }
 
 func ClearDatabase() error {
-	_, err := db.Exec("DELETE FROM expenses")
+	_, err := db.Exec("DELETE FROM accounts")
 	if err != nil {
-		log.Printf("Error clearing expenses table: %v", err)
+		log.Printf("Error clearing accounts table: %v", err)
 		return err
 	}
 
@@ -142,9 +152,9 @@ func ClearDatabase() error {
 		return err
 	}
 
-	_, err = db.Exec("DELETE FROM incomes")
+	_, err = db.Exec("DELETE FROM transactions")
 	if err != nil {
-		log.Printf("Error clearing income table: %v", err)
+		log.Printf("Error clearing transactions table: %v", err)
 		return err
 	}
 
