@@ -44,10 +44,10 @@ func SetupRouter() *gin.Engine {
 			transactions.GET("/period", c.GetTransactionsForPeriodController)
 			transactions.GET("/monthly", c.GetTransactionsMonthlyController)
 		}
-		// budget := v1.Group("/budget")
-		// {
-		// 	// budget.GET("/summary", c.GetBudgetSummaryController)
-		// }
+		budget := v1.Group("/budget")
+		{
+			budget.GET("/summary", c.GetBudgetSummaryController)
+		}
 		transfers := v1.Group("/transfers")
 		{
 			transfers.GET("", c.GetTransfersController)
