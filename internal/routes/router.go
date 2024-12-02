@@ -53,6 +53,10 @@ func SetupRouter() *gin.Engine {
 			transfers.GET("", c.GetTransfersController)
 			transfers.POST("", c.TransferFundsController)
 		}
+		reset := v1.Group("/reset")
+		{
+			reset.GET("", c.ResetController)
+		}
 	}
 	// Health
 	// r.GET("/health", c.HealthCheckController)
