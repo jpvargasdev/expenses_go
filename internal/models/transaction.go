@@ -10,10 +10,17 @@ import (
 )
 
 const (
-	TransactionTypeIncome   = "income"
-	TransactionTypeExpense  = "expense"
-	TransactionTypeSavings  = "savings"
-	TransactionTypeTransfer = "transfer"
+	TransactionTypeIncome   = "Income"
+	TransactionTypeExpense  = "Expense"
+	TransactionTypeSavings  = "Savings"
+	TransactionTypeTransfer = "Transfer"
+)
+
+const (
+	MainCategoryNeeds    = "Needs"
+	MainCategoryWants    = "Wants"
+	MainCategorySavings  = "Savings"
+	MainCategoryTransfer = "Transfer"
 )
 
 type Transaction struct {
