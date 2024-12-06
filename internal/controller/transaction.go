@@ -13,6 +13,16 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
+func (h *Controller) GetTransactionsByAccountController(c *gin.Context) {
+	accountId := c.Param("id")
+	transactions, err := models.GetTransactionsByAccount(accountId)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+	c.JSON(http.StatusOK, transactions)
+}
+
 func (h *Controller) GetTransactionsController(c *gin.Context) {
 	typeParam := c.Query("type")
 	accountParam := c.Query("account")

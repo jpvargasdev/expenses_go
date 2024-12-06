@@ -8,7 +8,7 @@ import (
 )
 
 func (h *Controller) ResetController(c *gin.Context) {
-	err := models.Reset()
+	err := models.ResetDatabase()
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return

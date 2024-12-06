@@ -43,6 +43,9 @@ func SetupRouter() *gin.Engine {
 			// Transaccions by period
 			transactions.GET("/period", c.GetTransactionsForPeriodController)
 			transactions.GET("/monthly", c.GetTransactionsMonthlyController)
+
+			// Transactions by account
+			transactions.GET("/account/:id", c.GetTransactionsByAccountController)
 		}
 		budget := v1.Group("/budget")
 		{
@@ -55,7 +58,7 @@ func SetupRouter() *gin.Engine {
 		}
 		reset := v1.Group("/reset")
 		{
-			reset.GET("", c.ResetController)
+			reset.POST("", c.ResetController)
 		}
 	}
 	// Health

@@ -487,3 +487,68 @@ func DeleteTransaction(id int) error {
 
 	return nil
 }
+
+func GetTransactionsByAccount(accountID string) ([]Transaction, error) {
+	// Prepare the SQL query
+	query := `
+		SELECT 
+			id, 
+			description, 
+			amount, 
+			currency, 
+			amount_in_base_currency, 
+			exchange_rate, 
+			date, 
+			main_category, 
+			subcategory, 
+			category_id, 
+			account_id, 
+			related_account_id, 
+			transaction_type, 
+			fees 
+		FROM transactions 
+		WHERE account_id = ?
+	`
+
+	// Initialize a slice to hold the transactions
+	var transactions []Transaction
+
+	// Execute the query
+	rows, err := db.Query(query, accountID)
+	if err != nil {
+		return nil, fmt.Errorf("failed to fetch transactions: %w", err)
+	}
+	defer rows.Close() // Ensure rows are closed
+
+	// Iterate through the result set and scan into the slice
+	for rows.Next() {
+		var transaction Transaction
+		err := rows.Scan(
+			&transaction.ID,
+			&transaction.Description,
+			&transaction.Amount,
+			&transaction.Currency,
+			&transaction.AmountInBaseCurrency,
+			&transaction.ExchangeRate,
+			&transaction.Date,
+			&transaction.MainCategory,
+			&transaction.Subcategory,
+			&transaction.CategoryID,
+			&transaction.AccountID,
+			&transaction.RelatedAccountID,
+			&transaction.TransactionType,
+			&transaction.Fees,
+		)
+		if err != nil {
+			return nil, fmt.Errorf("failed to scan transaction: %w", err)
+		}
+		transactions = append(transactions, transaction)
+	}
+
+	// Check for any error encountered during iteration
+	if err = rows.Err(); err != nil {
+		return nil, fmt.Errorf("error occurred during rows iteration: %w", err)
+	}
+
+	return transactions, nil
+}
