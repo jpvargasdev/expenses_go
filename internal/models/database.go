@@ -50,10 +50,22 @@ var initialCategories = []CategorySeed{
 var db *sql.DB
 
 func InitializeDatabase() {
-	var err error
-	db, err = sql.Open("sqlite3", "./guilliman.db")
-	if err != nil {
-		log.Fatalf("Failed to open SQLite database: %v", err)
+	const remoteDBURL = config.GetSqlDb()
+	
+	if remoteDBURL != "" {
+		// Connect to the hosted SQLite database
+		db, err = sql.Open("sqlite3", remoteDBURL)
+		if err != nil {
+			log.Fatalf("Failed to open remote SQLite database: %v", err)
+		}
+		log.Println("Connected to remote SQLite database:", remoteDBURL)
+	} else {
+		// Fallback to local SQLite file
+		db, err = sql.Open("sqlite3", "./guilliman.db")
+		if err != nil {
+			log.Fatalf("Failed to open local SQLite database: %v", err)
+		}
+		log.Println("Connected to local SQLite database: guilliman.db")
 	}
 
 	createTables()

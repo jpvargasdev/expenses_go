@@ -7,6 +7,7 @@ import (
 )
 
 type AppConfig struct {
+  Sql_Db string
   ServerPort string
   ExchangeRateKey string
 }
@@ -21,6 +22,7 @@ func Load() {
 
   Config.ServerPort = getEnv("SERVER_PORT", "8080")
   Config.ExchangeRateKey = getEnv("EXCHANGE_RATE_KEY", "")
+  Config.SqlDb = getEnv("SQL_URL", "")
 }
 
 func GetServerPort() string {
@@ -29,6 +31,10 @@ func GetServerPort() string {
 
 func GetExchangeRateKey() string {
   return Config.ExchangeRateKey
+}
+
+func GetSqlDb() string {
+  return Config.SqlDb
 }
 
 func getEnv(key, defaultVal string) string {
