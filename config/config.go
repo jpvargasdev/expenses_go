@@ -7,7 +7,7 @@ import (
 )
 
 type AppConfig struct {
-  Sql_Db string
+  SqlDb string
   ServerPort string
   ExchangeRateKey string
 }
