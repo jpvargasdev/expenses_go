@@ -2,6 +2,7 @@ package models
 
 import (
 	"database/sql"
+	"guilliman/config"
 	"log"
 
 	_ "github.com/mattn/go-sqlite3"
@@ -50,10 +51,13 @@ var initialCategories = []CategorySeed{
 var db *sql.DB
 
 func InitializeDatabase() {
-	const remoteDBURL = config.GetSqlDb()
-	
+	var remoteDBURL = config.GetSqlDb()
+
+	var err error
+
 	if remoteDBURL != "" {
 		// Connect to the hosted SQLite database
+
 		db, err = sql.Open("sqlite3", remoteDBURL)
 		if err != nil {
 			log.Fatalf("Failed to open remote SQLite database: %v", err)
