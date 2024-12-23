@@ -18,6 +18,7 @@ type BudgetSummary struct {
 	NeedsBudget       float64 `json:"needs_budget"`
 	WantsBudget       float64 `json:"wants_budget"`
 	SavingsBudget     float64 `json:"savings_budget"`
+	NetWorth          float64 `json:"net_worth"`
 }
 
 func GetBudgetSummary() (BudgetSummary, error) {
@@ -28,32 +29,48 @@ func GetBudgetSummary() (BudgetSummary, error) {
 	start = startDate.Unix()
 	end = endDate.Unix()
 
+	// Fetch total income
 	err := db.QueryRow(`
-        SELECT COALESCE(SUM(amount), 0) FROM transactions
-        WHERE transaction_type = 'Income' AND date BETWEEN ? AND ?`,
+        SELECT COALESCE(SUM(amount), 0) 
+        FROM transactions
+        WHERE transaction_type = 'Income' 
+          AND date BETWEEN ? AND ?`,
 		start, end).Scan(&summary.TotalIncome)
 	if err != nil {
 		return summary, fmt.Errorf("failed to retrieve total income: %v", err)
 	}
 
-	// Fetch total expenses for the current month
+	// Fetch total expenses
 	err = db.QueryRow(`
-        SELECT COALESCE(SUM(amount), 0) FROM transactions
-        WHERE transaction_type = 'Expense' AND date BETWEEN ? AND ?`,
+        SELECT COALESCE(SUM(amount), 0) 
+        FROM transactions
+        WHERE transaction_type = 'Expense' 
+          AND date BETWEEN ? AND ?`,
 		start, end).Scan(&summary.TotalExpenses)
 	if err != nil {
 		return summary, fmt.Errorf("failed to retrieve total expenses: %v", err)
 	}
-	// Convert total expenses to a positive number
+	// Convert expenses to a positive number (since stored as negative)
 	summary.TotalExpenses = -summary.TotalExpenses
 
 	// Calculate net balance
 	summary.NetBalance = summary.TotalIncome - summary.TotalExpenses
 
+	// Calculate net worth: sum of all account balances
+	err = db.QueryRow(`
+        SELECT COALESCE(SUM(balance), 0) 
+        FROM accounts`,
+	).Scan(&summary.NetWorth)
+	if err != nil {
+		return summary, fmt.Errorf("failed to retrieve net worth: %v", err)
+	}
+
 	// Fetch total expenses grouped by main_category
 	rows, err := db.Query(`
-        SELECT main_category, COALESCE(SUM(amount), 0) FROM transactions
-        WHERE transaction_type = 'Expense' AND date BETWEEN ? AND ?
+        SELECT main_category, COALESCE(SUM(amount), 0) 
+        FROM transactions
+        WHERE transaction_type = 'Expense' 
+          AND date BETWEEN ? AND ?
         GROUP BY main_category`,
 		start, end)
 	if err != nil {
@@ -70,8 +87,7 @@ func GetBudgetSummary() (BudgetSummary, error) {
 			return summary, fmt.Errorf("failed to scan expense row: %v", err)
 		}
 
-		// Expenses are stored as negative amounts, so take the absolute value
-		amount = -amount
+		amount = -amount // convert negative to positive expense
 
 		switch mainCategory {
 		case "Needs":
@@ -91,12 +107,12 @@ func GetBudgetSummary() (BudgetSummary, error) {
 	summary.WantsAmount = wantsAmount
 	summary.SavingsAmount = savingsAmount
 
-	// Calculate the budget allocations based on the 50/30/20 rule
+	// 50/30/20 budget allocations
 	summary.NeedsBudget = summary.TotalIncome * 0.50
 	summary.WantsBudget = summary.TotalIncome * 0.30
 	summary.SavingsBudget = summary.TotalIncome * 0.20
 
-	// Calculate the actual percentages spent
+	// Calculate actual percentages spent
 	if summary.TotalIncome > 0 {
 		summary.NeedsPercentage = (needsAmount / summary.TotalIncome) * 100
 		summary.WantsPercentage = (wantsAmount / summary.TotalIncome) * 100
