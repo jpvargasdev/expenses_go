@@ -21,6 +21,11 @@ build:
 run:
 	docker run -p $(HOST_PORT):$(CONTAINER_PORT) \
 		$(ENV_VARS) \
-		-v $(DB_VOLUME):/app/db \
+		-v $(DB_VOLUME):/data \
 		$(IMAGE_NAME)
+clean:
+	# Cleanup Docker containers, images, and local database files
+	docker rm -f $(IMAGE_NAME) || true
+	docker rmi $(IMAGE_NAME) || true
+	rm -rf $(DB_VOLUME)
 
