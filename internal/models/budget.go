@@ -114,9 +114,9 @@ func GetBudgetSummary(startDay string, endDay string) (BudgetSummary, error) {
 
 	// Calculate actual percentages spent
 	if summary.TotalIncome > 0 {
-		summary.NeedsPercentage = (needsAmount / summary.TotalIncome) * 100
-		summary.WantsPercentage = (wantsAmount / summary.TotalIncome) * 100
-		summary.SavingsPercentage = (savingsAmount / summary.TotalIncome) * 100
+		summary.NeedsPercentage = (needsAmount / summary.NeedsBudget) * 100
+		summary.WantsPercentage = (wantsAmount / summary.WantsBudget) * 100
+		summary.SavingsPercentage = (savingsAmount / summary.SavingsBudget) * 100
 	} else {
 		summary.NeedsPercentage = 0
 		summary.WantsPercentage = 0
