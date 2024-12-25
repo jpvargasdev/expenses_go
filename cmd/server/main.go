@@ -42,6 +42,10 @@ func main() {
 		os.Exit(0)
 	}()
 
+	if err := models.CreateTables(); err != nil {
+		log.Fatalf("Failed to create tables: %v", err)
+	}
+
 	// Seed the database with initial categories
 	if err := models.SeedCategories(); err != nil {
 		log.Fatalf("Failed to seed categories: %v", err)

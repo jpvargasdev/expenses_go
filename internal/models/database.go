@@ -3,6 +3,7 @@ package models
 import (
 	"database/sql"
 	"log"
+	"os"
 
 	_ "github.com/mattn/go-sqlite3"
 )
@@ -50,12 +51,38 @@ var initialCategories = []CategorySeed{
 var db *sql.DB
 
 func InitializeDatabase() {
-	var err error
-	db, err = sql.Open("sqlite3", "/data/guilliman.db")
-	if err != nil {
-		log.Fatalf("Failed to open local SQLite database: %v", err)
+	// Check for the development mode using the DEV environment variable
+	devMode := os.Getenv("DEV") == "true"
+
+	// Set database path based on the mode
+	databasePath := "/data/guilliman.db"
+	if devMode {
+		databasePath = "./dev_guilliman.db"
+		log.Println("Running in development mode. Using local database:", databasePath)
+	} else {
+		// Ensure the /data directory exists in production mode
+		dataDir := "/data"
+		err := os.MkdirAll(dataDir, os.ModePerm)
+		if err != nil {
+			log.Fatalf("Failed to create data directory: %v", err)
+		}
+		log.Println("Running in production mode.")
 	}
-	log.Println("Connected to local SQLite database: guilliman.db")
+
+	// Open the SQLite database
+	var err error
+	db, err = sql.Open("sqlite3", databasePath)
+	if err != nil {
+		log.Fatalf("Failed to open SQLite database: %v", err)
+	}
+
+	// Test the database connection
+	err = db.Ping()
+	if err != nil {
+		log.Fatalf("Failed to connect to SQLite database: %v", err)
+	}
+
+	log.Printf("Connected to SQLite database at %s", databasePath)
 }
 
 func SeedCategories() error {
@@ -84,7 +111,7 @@ func SeedCategories() error {
 	return nil
 }
 
-func createTables() {
+func CreateTables() error {
 	categoryTable := `CREATE TABLE IF NOT EXISTS categories (
 		id INTEGER PRIMARY KEY AUTOINCREMENT,
 		name TEXT UNIQUE NOT NULL,         -- Name of the subcategory
@@ -122,18 +149,23 @@ func createTables() {
 	_, err := db.Exec(categoryTable)
 	if err != nil {
 		log.Fatalf("Failed to create categories table: %v", err)
+		return err
 	}
 
 	_, err = db.Exec(transactionsTable)
 	if err != nil {
 		log.Fatalf("Failed to create transactions table: %v", err)
+		return err
 	}
 
 	_, err = db.Exec(accountsTable)
 	if err != nil {
 		log.Fatalf("Failed to create accounts table: %v", err)
+		return err
 	}
 
+	log.Println("Tables created successfully")
+	return nil
 }
 
 func CloseDatabase() {
