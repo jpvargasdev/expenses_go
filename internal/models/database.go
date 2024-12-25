@@ -55,9 +55,9 @@ func InitializeDatabase() {
 	devMode := os.Getenv("DEV") == "true"
 
 	// Set database path based on the mode
-	databasePath := "/data/guilliman.db"
+	databasePath := "/data/database.db"
 	if devMode {
-		databasePath = "./dev_guilliman.db"
+		databasePath = "./dev_database.db"
 		log.Println("Running in development mode. Using local database:", databasePath)
 	} else {
 		// Ensure the /data directory exists in production mode
