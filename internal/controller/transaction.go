@@ -126,6 +126,8 @@ func (h *Controller) GetTransactionsMonthlyController(c *gin.Context) {
 	typeParam := c.Query("type")
 	accountParam := c.Query("account")
 	accountId, _ := strconv.Atoi(accountParam)
+	startDay := c.Query("start_day")
+	endDay := c.Query("end_day")
 
 	// check transaction type is valid or empty
 	if typeParam != models.TransactionTypeExpense &&
@@ -137,7 +139,7 @@ func (h *Controller) GetTransactionsMonthlyController(c *gin.Context) {
 		return
 	}
 
-	startDate, endDate := timeutils.GetSalaryMonthRange()
+	startDate, endDate := timeutils.GetSalaryMonthRange(startDay, endDay)
 	startTimestamp := startDate.Unix()
 	endTimestamp := endDate.Unix()
 

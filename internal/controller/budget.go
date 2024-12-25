@@ -7,14 +7,15 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-
-
 func (h *Controller) GetBudgetSummaryController(c *gin.Context) {
-  budgetSummary, err := models.GetBudgetSummary()
-  if err != nil {
-    c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
-    return
-  }
+	startDay := c.Query("start_day")
+	endDay := c.Query("end_day")
 
-  c.JSON(http.StatusOK, budgetSummary)
+	budgetSummary, err := models.GetBudgetSummary(startDay, endDay)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	c.JSON(http.StatusOK, budgetSummary)
 }

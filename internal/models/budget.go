@@ -21,11 +21,11 @@ type BudgetSummary struct {
 	NetWorth          float64 `json:"net_worth"`
 }
 
-func GetBudgetSummary() (BudgetSummary, error) {
+func GetBudgetSummary(startDay string, endDay string) (BudgetSummary, error) {
 	var summary BudgetSummary
 	var start, end int64
 
-	startDate, endDate := timeutils.GetSalaryMonthRange()
+	startDate, endDate := timeutils.GetSalaryMonthRange(startDay, endDay)
 	start = startDate.Unix()
 	end = endDate.Unix()
 

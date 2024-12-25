@@ -1,6 +1,9 @@
 package timeutils
 
-import "time"
+import (
+	"strconv"
+	"time"
+)
 
 func CalculatePeriodBoundaries(date time.Time, offset ...int) (int64, int64) {
 	mOffset := 1
@@ -16,28 +19,32 @@ func CalculatePeriodBoundaries(date time.Time, offset ...int) (int64, int64) {
 	return start, end
 }
 
-func GetSalaryMonthRange(salaryDay ...int) (startDate time.Time, endDate time.Time) {
-	day := 25
+func GetSalaryMonthRange(days ...string) (startDate time.Time, endDate time.Time) {
+	var startDay, endDay int
 
-	if len(salaryDay) > 0 {
-		day = salaryDay[0]
+	if days[0] != "" {
+		startDay, _ = strconv.Atoi(days[0])
+	} else {
+		startDay = 25
+	}
+
+	if days[1] != "" {
+		endDay, _ = strconv.Atoi(days[1])
+	} else {
+		endDay = 24
 	}
 
 	now := time.Now()
 
-	// Determine if we are in the period after or before the 25th
-	if now.Day() >= day {
-		// Current period: 25th of current month to 24th of next month
-		startDate = time.Date(now.Year(), now.Month(), day, 0, 0, 0, 0, now.Location())
-		endDate = startDate.AddDate(0, 1, -1)
+	if now.Day() >= startDay {
+		// Current period: salaryDay of this month to endMonthDay of the next month
+		startDate = time.Date(now.Year(), now.Month(), startDay, 0, 0, 0, 0, now.Location())
+		endDate = time.Date(now.Year(), now.Month()+1, endDay, 23, 59, 59, 999999999, now.Location())
 	} else {
-		// Previous period: 25th of previous month to 24th of current month
-		startDate = time.Date(now.Year(), now.Month(), day, 0, 0, 0, 0, now.Location()).AddDate(0, -1, 0)
-		endDate = startDate.AddDate(0, 1, -1)
+		// Previous period: salaryDay of the previous month to endMonthDay of this month
+		startDate = time.Date(now.Year(), now.Month()-1, startDay, 0, 0, 0, 0, now.Location())
+		endDate = time.Date(now.Year(), now.Month(), endDay, 23, 59, 59, 999999999, now.Location())
 	}
-
-	// Set end date time to the end of the day
-	endDate = time.Date(endDate.Year(), endDate.Month(), endDate.Day(), 23, 59, 59, 999999999, endDate.Location())
 
 	return startDate, endDate
 }
