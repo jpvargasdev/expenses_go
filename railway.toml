@@ -1,0 +1,12 @@
+[project]
+name = "guilliman"
+
+[services]
+  [services.guilliman]
+  name = "guilliman-app"
+  startCommand = "./guilliman" # Update this if you have a custom entrypoint
+  buildCommand = "go build -o guilliman cmd/server/main.go"
+  [services.guilliman.deploy]
+    dockerfilePath = "./Dockerfile" # Path to your Dockerfile
+  [services.guilliman.volumes]
+    "/data" = "guilliman-data" # Mount external volume "guilliman-data" to /data in the container
