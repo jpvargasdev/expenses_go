@@ -23,6 +23,20 @@ func (h *Controller) GetTransactionsByAccountController(c *gin.Context) {
 	c.JSON(http.StatusOK, transactions)
 }
 
+func (h *Controller) GetTransactionsByMainCategory(c *gin.Context) {
+	mainCategory := c.Param("main_category")
+	startDay := c.Query("start_day")
+	endDay := c.Query("end_day")
+
+	transactions, err := models.GetTransactionsByMainCategory(mainCategory, startDay, endDay)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	c.JSON(http.StatusOK, transactions)
+}
+
 func (h *Controller) GetTransactionsController(c *gin.Context) {
 	typeParam := c.Query("type")
 	accountParam := c.Query("account")

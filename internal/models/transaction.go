@@ -4,6 +4,7 @@ import (
 	"database/sql"
 	"fmt"
 	"guilliman/internal/utils"
+	"guilliman/internal/utils/timeutils"
 	"log"
 	"strings"
 	"time"
@@ -40,7 +41,74 @@ type Transaction struct {
 	Fees                 int     `json:"fees"`
 }
 
-type TransactionWithFee struct {
+func GetTransactionsByMainCategory(mainCategory string, startDay string, endDay string) ([]Transaction, error) {
+	var start, end int64
+
+	startDate, endDate := timeutils.GetSalaryMonthRange(startDay, endDay)
+	start = startDate.Unix()
+	end = endDate.Unix()
+
+	query := `SELECT 
+	  id,	
+	  description,	
+	  amount,	
+	  currency,	
+	  amount_in_base_currency,	
+	  exchange_rate,	
+	  main_category,	
+	  subcategory,	
+	  date,	
+	  category_id,
+	  account_id,
+	  related_account_id,
+	  transaction_type
+	FROM transactions`
+
+	var conditions []string
+	var args []interface{}
+
+	if mainCategory != "" {
+		conditions = append(conditions, "main_category = ?")
+		args = append(args, mainCategory)
+	}
+
+	conditions = append(conditions, "date BETWEEN ? AND ?")
+	args = append(args, start, end)
+
+	if len(conditions) > 0 {
+		query += " WHERE " + strings.Join(conditions, " AND ")
+	}
+
+	rows, err := db.Query(query, args...)
+
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var transactions []Transaction
+	for rows.Next() {
+		var transaction Transaction
+		if err := rows.Scan(
+			&transaction.ID,
+			&transaction.Description,
+			&transaction.Amount,
+			&transaction.Currency,
+			&transaction.AmountInBaseCurrency,
+			&transaction.ExchangeRate,
+			&transaction.MainCategory,
+			&transaction.Subcategory,
+			&transaction.Date,
+			&transaction.CategoryID,
+			&transaction.AccountID,
+			&transaction.RelatedAccountID,
+			&transaction.TransactionType,
+		); err != nil {
+			return nil, err
+		}
+		transactions = append(transactions, transaction)
+	}
+	return transactions, nil
 }
 
 func GetTransactions(transactionType string, accountId int) ([]Transaction, error) {
