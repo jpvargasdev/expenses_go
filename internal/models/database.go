@@ -116,6 +116,9 @@ func CreateTables() error {
 		id INTEGER PRIMARY KEY AUTOINCREMENT,
 		name TEXT UNIQUE NOT NULL,         -- Name of the subcategory
 		main_category TEXT NOT NULL        -- Main category (Needs, Wants, Savings, Transfer)
+    user_id INTEGER                    -- User who owns the category
+    FOREIGN KEY (user_id) REFERENCES users(id)
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 	);`
 
 	transactionsTable := `CREATE TABLE IF NOT EXISTS transactions (
@@ -129,6 +132,7 @@ func CreateTables() error {
 		main_category TEXT NOT NULL,                 -- Needs, Wants, Savings
 		subcategory TEXT NOT NULL,                   -- Name of the subcategory
 		category_id INTEGER,
+    user_id INTEGER,                             -- User from which the transaction is made
 		account_id INTEGER,                          -- Account from which the transaction is made
 		related_account_id INTEGER,                  -- Account to which the transaction is made (for transfers)
 		transaction_type TEXT NOT NULL,              -- 'Expense', 'Income', 'Savings', 'Transfer'
@@ -136,6 +140,8 @@ func CreateTables() error {
 		FOREIGN KEY (category_id) REFERENCES categories(id),
 		FOREIGN KEY (account_id) REFERENCES accounts(id),
 		FOREIGN KEY (related_account_id) REFERENCES accounts(id)
+    FOREIGN KEY (user_id) REFERENCES users(id)
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 	);`
 
 	accountsTable := `CREATE TABLE IF NOT EXISTS accounts (
@@ -144,7 +150,17 @@ func CreateTables() error {
 		type TEXT NOT NULL,          -- Type of account (e.g., "Bank", "Credit Card", "Cash")
 		currency TEXT NOT NULL,      -- Currency of the account (e.g., "USD", "EUR")
 		balance REAL DEFAULT 0       -- Current balance of the account (optional)
+    user_id INTEGER              -- User who owns the account
+    FOREIGN KEY (user_id) REFERENCES users(id)
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 	);`
+
+  userTable := `CREATE TABLE IF NOT EXISTS users (
+    id INTEGER PRIMARY KEY AUTOINCREMENT
+    email TEXT NOT NULL,
+    password TEXT NOT_NULL
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+  )`
 
 	_, err := db.Exec(categoryTable)
 	if err != nil {
@@ -163,6 +179,12 @@ func CreateTables() error {
 		log.Fatalf("Failed to create accounts table: %v", err)
 		return err
 	}
+
+  _, err = db.Exec(userTable)
+  if err != nil {
+    log.Fatalf("Failed to create users table :%v", err)
+    return err
+  }
 
 	log.Println("Tables created successfully")
 	return nil

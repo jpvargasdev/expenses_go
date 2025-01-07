@@ -61,6 +61,12 @@ func SetupRouter() *gin.Engine {
 		{
 			reset.POST("", c.ResetController)
 		}
+    user := v1.Group("/user") 
+    {
+      user.POST("/register", c.RegisterUserController)
+      user.POST("/login", c.LoginUserController)
+      user.POST("/reset", c.ResetUserController)
+    }
 	}
 	// Health
 	// r.GET("/health", c.HealthCheckController)
