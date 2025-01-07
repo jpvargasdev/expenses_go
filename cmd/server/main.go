@@ -46,6 +46,8 @@ func main() {
 		log.Fatalf("Failed to create tables: %v", err)
 	}
 
+	RunMigrations() // Apply any pending migrations
+
 	// Seed the database with initial categories
 	if err := models.SeedCategories(); err != nil {
 		log.Fatalf("Failed to seed categories: %v", err)
@@ -60,4 +62,12 @@ func main() {
 	if err := router.Run(":" + port); err != nil {
 		log.Fatalf("Error starting Guilliman server: %v", err)
 	}
+}
+
+func RunMigrations() {
+	err := models.ApplyMigrations()
+	if err != nil {
+		log.Fatalf("Failed to apply migrations: %v", err)
+	}
+	log.Println("Migrations applied successfully")
 }

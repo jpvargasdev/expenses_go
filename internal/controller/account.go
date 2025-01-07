@@ -23,9 +23,15 @@ import (
 // @Router       /accounts/{id} [get]
 
 func (h *Controller) GetAccountsController(c *gin.Context) {
+	userID, exists := c.Get("user_id")
+	if !exists {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "User ID not found in context"})
+		return
+	}
+
 	accountId := c.Param("id")
 
-	accounts, err := models.GetAccounts(accountId) // Fetch accounts from storage
+	accounts, err := models.GetAccounts(accountId, userID.(int)) // Fetch accounts from storage
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
@@ -34,12 +40,18 @@ func (h *Controller) GetAccountsController(c *gin.Context) {
 }
 
 func (h *Controller) AddAccountController(c *gin.Context) {
+	userID, exists := c.Get("user_id")
+	if !exists {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "User ID not found in context"})
+		return
+	}
+
 	var newAccount models.Account
 	if err := c.ShouldBindJSON(&newAccount); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
-	account, err := models.AddAccount(newAccount) // Add account to storage
+	account, err := models.AddAccount(newAccount, userID.(int)) // Add account to storage
 	if err != nil {
 		// You can log the error or return it, depending on your application's needs
 		log.Printf("Error adding account: %v", err)
@@ -50,6 +62,12 @@ func (h *Controller) AddAccountController(c *gin.Context) {
 }
 
 func (h *Controller) DeleteAccountController(c *gin.Context) {
+	userID, exists := c.Get("user_id")
+	if !exists {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "User ID not found in context"})
+		return
+	}
+
 	idParam := c.Param("id")
 	id, err := strconv.Atoi(idParam)
 	if err != nil {
@@ -57,7 +75,7 @@ func (h *Controller) DeleteAccountController(c *gin.Context) {
 		return
 	}
 
-	account, err := models.DeleteAccount(id) // Add account to storage
+	account, err := models.DeleteAccount(id, userID.(int)) // Add account to storage
 	if err != nil {
 		// You can log the error or return it, depending on your application's needs
 		log.Printf("Error adding account: %v", err)

@@ -2,6 +2,7 @@ package routes
 
 import (
 	"guilliman/internal/controller"
+	"guilliman/internal/middleware"
 
 	"github.com/gin-gonic/gin"
 	swaggerFiles "github.com/swaggo/files"
@@ -12,23 +13,31 @@ func SetupRouter() *gin.Engine {
 	r := gin.Default()
 	c := controller.NewController()
 
-	v1 := r.Group("/api/v1")
+	public := r.Group("/api/v1")
+	user := public.Group("/user")
 	{
-		categories := v1.Group("/categories")
+		user.POST("/register", c.RegisterUserController)
+		user.POST("/login", c.LoginUserController)
+	}
+
+	protected := r.Group("/api/v1")
+	protected.Use(middleware.AuthMiddleware())
+	{
+		categories := protected.Group("/categories")
 		{
 			categories.GET("", c.GetCategoriesController)
 			categories.POST("", c.CreateCategoryController)
 			// categories.PUT("/categories/:id", c.UpdateCategoryController)
 			// categories.DELETE("/categories/:id", c.DeleteCategoryController)
 		}
-		accounts := v1.Group("/accounts")
+		accounts := protected.Group("/accounts")
 		{
 			accounts.GET("", c.GetAccountsController)
 			accounts.POST("", c.AddAccountController)
 			// accounts.PUT("/accounts/:id", c.UpdateAccountController)
 			accounts.DELETE(":id", c.DeleteAccountController)
 		}
-		transactions := v1.Group("/transactions")
+		transactions := protected.Group("/transactions")
 		{
 			transactions.GET("", c.GetTransactionsController)
 			transactions.POST("", c.AddTransactionController)
@@ -48,26 +57,21 @@ func SetupRouter() *gin.Engine {
 			// Transactions by account
 			transactions.GET("/account/:id", c.GetTransactionsByAccountController)
 		}
-		budget := v1.Group("/budget")
+		budget := protected.Group("/budget")
 		{
 			budget.GET("/summary", c.GetBudgetSummaryController)
 		}
-		transfers := v1.Group("/transfers")
+		transfers := protected.Group("/transfers")
 		{
 			transfers.GET("", c.GetTransfersController)
 			transfers.POST("", c.TransferFundsController)
 		}
-		reset := v1.Group("/reset")
+		reset := protected.Group("/user")
 		{
-			reset.POST("", c.ResetController)
+			reset.POST("/reset", c.ResetController)
 		}
-    user := v1.Group("/user") 
-    {
-      user.POST("/register", c.RegisterUserController)
-      user.POST("/login", c.LoginUserController)
-      user.POST("/reset", c.ResetUserController)
-    }
 	}
+
 	// Health
 	// r.GET("/health", c.HealthCheckController)
 

@@ -14,8 +14,14 @@ import (
 )
 
 func (h *Controller) GetTransactionsByAccountController(c *gin.Context) {
+	userID, exists := c.Get("user_id")
+	if !exists {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "User ID not found in context"})
+		return
+	}
+
 	accountId := c.Param("id")
-	transactions, err := models.GetTransactionsByAccount(accountId)
+	transactions, err := models.GetTransactionsByAccount(accountId, userID.(int))
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
@@ -24,11 +30,17 @@ func (h *Controller) GetTransactionsByAccountController(c *gin.Context) {
 }
 
 func (h *Controller) GetTransactionsByMainCategory(c *gin.Context) {
+	userID, exists := c.Get("user_id")
+	if !exists {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "User ID not found in context"})
+		return
+	}
+
 	mainCategory := c.Param("main_category")
 	startDay := c.Query("start_day")
 	endDay := c.Query("end_day")
 
-	transactions, err := models.GetTransactionsByMainCategory(mainCategory, startDay, endDay)
+	transactions, err := models.GetTransactionsByMainCategory(mainCategory, startDay, endDay, userID.(int))
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
@@ -38,6 +50,12 @@ func (h *Controller) GetTransactionsByMainCategory(c *gin.Context) {
 }
 
 func (h *Controller) GetTransactionsController(c *gin.Context) {
+	userID, exists := c.Get("user_id")
+	if !exists {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "User ID not found in context"})
+		return
+	}
+
 	typeParam := c.Query("type")
 	accountParam := c.Query("account")
 	accountId, _ := strconv.Atoi(accountParam)
@@ -52,7 +70,7 @@ func (h *Controller) GetTransactionsController(c *gin.Context) {
 		return
 	}
 
-	transactions, err := models.GetTransactions(typeParam, accountId)
+	transactions, err := models.GetTransactions(typeParam, accountId, userID.(int))
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
@@ -61,13 +79,19 @@ func (h *Controller) GetTransactionsController(c *gin.Context) {
 }
 
 func (h *Controller) AddTransactionController(c *gin.Context) {
+	userID, exists := c.Get("user_id")
+	if !exists {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "User ID not found in context"})
+		return
+	}
+
 	var transaction models.Transaction
 	if err := c.ShouldBindJSON(&transaction); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
 
-	transaction, err := models.AddTransaction(transaction)
+	transaction, err := models.AddTransaction(transaction, userID.(int))
 	if err != nil {
 		log.Printf("Error adding transaction: %v", err)
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to add transaction"})
@@ -77,6 +101,12 @@ func (h *Controller) AddTransactionController(c *gin.Context) {
 }
 
 func (h *Controller) DeleteTransactionController(c *gin.Context) {
+	userID, exists := c.Get("user_id")
+	if !exists {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "User ID not found in context"})
+		return
+	}
+
 	idParam := c.Param("id")
 	id, err := strconv.Atoi(idParam)
 	if err != nil {
@@ -84,7 +114,7 @@ func (h *Controller) DeleteTransactionController(c *gin.Context) {
 		return
 	}
 
-	err = models.DeleteTransaction(id)
+	err = models.DeleteTransaction(id, userID.(int))
 	if err != nil {
 		if err == sql.ErrNoRows {
 			c.JSON(http.StatusNotFound, gin.H{"error": "Transaction not found"})
@@ -98,6 +128,12 @@ func (h *Controller) DeleteTransactionController(c *gin.Context) {
 }
 
 func (h *Controller) GetTransactionsForPeriodController(c *gin.Context) {
+	userID, exists := c.Get("user_id")
+	if !exists {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "User ID not found in context"})
+		return
+	}
+
 	dateParam := c.Query("date")
 	typeParam := c.Query("type")
 	accountParam := c.Query("account")
@@ -127,7 +163,7 @@ func (h *Controller) GetTransactionsForPeriodController(c *gin.Context) {
 
 	startTimestamp, endTimestamp := timeutils.CalculatePeriodBoundaries(date)
 
-	expenses, err := models.GetTransactionsForPeriod(startTimestamp, endTimestamp, typeParam, accountId)
+	expenses, err := models.GetTransactionsForPeriod(startTimestamp, endTimestamp, typeParam, accountId, userID.(int))
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
@@ -137,6 +173,12 @@ func (h *Controller) GetTransactionsForPeriodController(c *gin.Context) {
 }
 
 func (h *Controller) GetTransactionsMonthlyController(c *gin.Context) {
+	userID, exists := c.Get("user_id")
+	if !exists {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "User ID not found in context"})
+		return
+	}
+
 	typeParam := c.Query("type")
 	accountParam := c.Query("account")
 	accountId, _ := strconv.Atoi(accountParam)
@@ -157,7 +199,7 @@ func (h *Controller) GetTransactionsMonthlyController(c *gin.Context) {
 	startTimestamp := startDate.Unix()
 	endTimestamp := endDate.Unix()
 
-	expenses, err := models.GetTransactionsForPeriod(startTimestamp, endTimestamp, typeParam, accountId)
+	expenses, err := models.GetTransactionsForPeriod(startTimestamp, endTimestamp, typeParam, accountId, userID.(int))
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return

@@ -12,8 +12,8 @@ type Category struct {
 	MainCategory string `json:"main_category"`
 }
 
-func GetCategories() ([]Category, error) {
-	rows, err := db.Query("SELECT id, name, main_category FROM categories")
+func GetCategories(userID int) ([]Category, error) {
+	rows, err := db.Query("SELECT id, name, main_category FROM categories WHERE user_id = ?", userID)
 	if err != nil {
 		return nil, err
 	}
@@ -35,8 +35,8 @@ func GetCategories() ([]Category, error) {
 	return categories, nil
 }
 
-func AddCategory(category Category) (Category, error) {
-	result, err := db.Exec("INSERT INTO categories (name, main_category) VALUES (?, ?)", category.Name, category.MainCategory)
+func AddCategory(category Category, userID int) (Category, error) {
+	result, err := db.Exec("INSERT INTO categories (name, main_category, user_id) VALUES (?, ?, ?)", category.Name, category.MainCategory, userID)
 	if err != nil {
 		return Category{}, err
 	}
@@ -56,7 +56,7 @@ func GetMainCategory(id int) (string, error) {
 	err := db.QueryRow("SELECT main_category FROM categories WHERE id = ?", id).Scan(&mainCategory)
 	if err != nil {
 		if err == sql.ErrNoRows {
-			return "", fmt.Errorf("subcategory '%s' not found in categories table", string(id))
+			return "", fmt.Errorf("subcategory '%s' not found in categories table", fmt.Sprint(id))
 		}
 		return "", err
 	}
@@ -68,7 +68,7 @@ func GetSubCategory(id int) (string, error) {
 	err := db.QueryRow("SELECT name FROM categories WHERE id = ?", id).Scan(&subCategory)
 	if err != nil {
 		if err == sql.ErrNoRows {
-			return "", fmt.Errorf("subcategory '%s' not found in categories table", string(id))
+			return "", fmt.Errorf("subcategory '%s' not found in categories table", fmt.Sprint(id))
 		}
 		return "", err
 	}

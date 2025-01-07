@@ -10,10 +10,15 @@ import (
 )
 
 func (h *Controller) GetTransfersController(c *gin.Context) {
+	userID, exists := c.Get("user_id")
+	if !exists {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "User ID not found in context"})
+		return
+	}
 	accountParam := c.Query("account")
 	accountId, _ := strconv.Atoi(accountParam)
 
-	expenses, err := models.GetTransactions(models.TransactionTypeTransfer, accountId)
+	expenses, err := models.GetTransactions(models.TransactionTypeTransfer, accountId, userID.(int))
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
@@ -22,6 +27,11 @@ func (h *Controller) GetTransfersController(c *gin.Context) {
 }
 
 func (h *Controller) TransferFundsController(c *gin.Context) {
+	userID, exists := c.Get("user_id")
+	if !exists {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "User ID not found in context"})
+		return
+	}
 	var transfer models.Transaction
 	if err := c.ShouldBindJSON(&transfer); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
@@ -38,7 +48,7 @@ func (h *Controller) TransferFundsController(c *gin.Context) {
 		return
 	}
 
-	transaction, err := models.AddTransfer(transfer)
+	transaction, err := models.AddTransfer(transfer, userID.(int))
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return

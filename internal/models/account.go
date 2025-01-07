@@ -11,13 +11,14 @@ type Account struct {
 	Type     string  `json:"type"`     // Type of account (e.g., "Bank", "Credit Card", "Cash")
 	Currency string  `json:"currency"` // Currency of the account (e.g., "USD", "EUR")
 	Balance  float64 `json:"balance"`  // Balance of the account (optional)
+	UserID   int     `json:"user_id"`
 }
 
-func GetAccounts(id string) ([]Account, error) {
+func GetAccounts(id string, userID int) ([]Account, error) {
 	query := "SELECT id, name, type, currency, balance FROM accounts"
 
 	if id != "" {
-		query += " WHERE id = ?"
+		query += " WHERE id = ? AND user_id = ?"
 	}
 
 	rows, err := db.Query(query, id)
@@ -49,11 +50,11 @@ func GetAccounts(id string) ([]Account, error) {
 	return accounts, nil
 }
 
-func GetAccountByID(id int) (Account, error) {
-	query := "SELECT id, name, type, currency, balance FROM accounts WHERE id = ?"
+func GetAccountByID(id int, userID int) (Account, error) {
+	query := "SELECT id, name, type, currency, balance FROM accounts WHERE id = ? AND user_id = ?"
 
 	var account Account
-	if err := db.QueryRow(query, id).Scan(
+	if err := db.QueryRow(query, id, userID).Scan(
 		&account.ID,
 		&account.Name,
 		&account.Type,
@@ -66,17 +67,19 @@ func GetAccountByID(id int) (Account, error) {
 	return account, nil
 }
 
-func AddAccount(acccount Account) (Account, error) {
+func AddAccount(acccount Account, userID int) (Account, error) {
 	result, err := db.Exec(`INSERT INTO accounts (
 		name,
 		type,
 		currency,
-		balance
-	) VALUES (?, ?, ?, ?)`,
+		balance,
+		user_id
+	) VALUES (?, ?, ?, ?, ?)`,
 		acccount.Name,
 		acccount.Type,
 		acccount.Currency,
 		acccount.Balance,
+		userID,
 	)
 	if err != nil {
 		return Account{}, err
@@ -92,7 +95,7 @@ func AddAccount(acccount Account) (Account, error) {
 	return acccount, nil
 }
 
-func UpdateAccount(account Account) (Account, error) {
+func UpdateAccount(account Account, userID int) (Account, error) {
 	query := `
 		UPDATE accounts
 		SET
@@ -100,10 +103,10 @@ func UpdateAccount(account Account) (Account, error) {
 			type = COALESCE(?, type),
 			currency = COALESCE(?, currency),
 			balance = COALESCE(?, balance)
-		WHERE id = ?`
+		WHERE id = ? AND user_id = ?`
 
 	// Execute the query
-	result, err := db.Exec(query, account.Name, account.Type, account.Currency, account.Balance, account.ID)
+	result, err := db.Exec(query, account.Name, account.Type, account.Currency, account.Balance, account.ID, userID)
 	if err != nil {
 		return Account{}, fmt.Errorf("failed to update account: %v", err)
 	}
@@ -120,10 +123,10 @@ func UpdateAccount(account Account) (Account, error) {
 	return account, nil
 }
 
-func DeleteAccount(id int) (Account, error) {
-	query := "DELETE FROM accounts WHERE id = ?"
+func DeleteAccount(id int, userID int) (Account, error) {
+	query := "DELETE FROM accounts WHERE id = ? AND user_id = ?"
 
-	result, err := db.Exec(query, id)
+	result, err := db.Exec(query, id, userID)
 	if err != nil {
 		return Account{}, err
 	}
