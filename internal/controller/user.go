@@ -1,53 +1,59 @@
-package controller
+package controller 
 
 import (
 	"guilliman/internal/models"
-	"guilliman/internal/utils"
+	"log"
 	"net/http"
 
 	"github.com/gin-gonic/gin"
 )
 
-func (h *Controller) RegisterUserController(c *gin.Context) {
-  var user models.User
-  if err := c.ShouldBindJSON(&user); err != nil {
-    c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+func (h *Controller) DeleteUserController(c *gin.Context) {
+  userUID, exists := c.Get("userUID")
+  if !exists {
+		c.JSON(401, gin.H{"error": "User not authenticated"})
+		return
+	}
+  uid, ok := userUID.(string)
+  if !ok {
+    c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to get user UID"})
     return
   }
-  
-  user, err := models.RegisterUser(user)
 
+  err := models.DeleteUser(uid)
   if err != nil {
-    c.JSON(http.StatusInternalServerError, gin.H{"error": "Error creating user"})
-  }
-
-  c.JSON(http.StatusCreated, gin.H{"status": "User created"})
+		log.Printf("Error deleting user: %v", err)
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to elete user"})
+		return
+	}
+	c.JSON(http.StatusOK, "OK")
 }
 
-func (h *Controller) LoginUserController(c *gin.Context) {
-  var user models.User
-  var userLogged models.UserLogged
-
-  if err := c.ShouldBindJSON(&user); err != nil {
-    c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+func (h *Controller) CreateUserController(c *gin.Context) {
+  userUID, exists := c.Get("userUID")
+  if !exists {
+		c.JSON(401, gin.H{"error": "User not authenticated"})
+		return
+	}
+  uid, ok := userUID.(string)
+  if !ok {
+    c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to get user UID"})
     return
   }
-  
-  userLogged, err := models.LoginUser(user)
 
-  if err != nil {
-    c.JSON(http.StatusInternalServerError, gin.H{"error": "Error in user"})
+  var newUser models.User
+  if err := c.ShouldBindJSON(&newUser); err != nil {
+    c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
   }
 
-  token, err := utils.GenerateToken(userLogged.Id)
+  newUser.ID = uid 
 
+  err := models.CreateUser(newUser)
   if err != nil {
-    c.JSON(http.StatusInternalServerError, gin.H{"error": "Error logging user"})
-  }
-
-  c.JSON(http.StatusOK, gin.H{"token": token})
-}
-
-func (h *Controller) ResetUserController(c *gin.Context) {
-
+		log.Printf("Error creating user: %v", err)
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to create user"})
+		return
+	}
+	c.JSON(http.StatusCreated, "OK")
 }

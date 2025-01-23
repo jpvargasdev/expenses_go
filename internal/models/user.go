@@ -1,46 +1,44 @@
 package models
 
-import "golang.org/x/crypto/bcrypt"
+import "fmt"
 
 type User struct {
-  Email    string `json:"email"`
-  Password string `json:"password"`
+	ID            string `json:"id"`
+	Email         string `json:"email"`
+	DisplayName   string `json:"display_name"`
+  PhoneNumber   string `json:"phone_number"`
+  PhotoUrl      string `json:"photo_url`
 }
 
-type UserLogged struct {
-  Id int       `json:"id"`
-  Password string `json:"password"`
+func CreateUser(user User) error {
+  // Check if the user already exists in the database
+	var exists bool
+	err := db.QueryRow("SELECT EXISTS(SELECT 1 FROM users WHERE id = ?)", user.ID).Scan(&exists)
+	if err != nil {
+		return err
+	}
+
+	if exists {
+		return fmt.Errorf("User already exists") 
+	}
+
+	// Insert the new user into the database
+	query := `
+		INSERT INTO users (id, email, display_name, phone_number, photo_url) 
+		VALUES (?, ?)
+	`
+	_, err = db.Exec(query, user.ID, user.Email, user.DisplayName, user.PhoneNumber, user.PhotoUrl)
+	if err != nil {
+		return err
+	}
+
+  return nil
 }
 
-func RegisterUser(user User) (User, error) {
-  hashedPassword, _ := bcrypt.GenerateFromPassword([]byte(user.Password), bcrypt.DefaultCost)
-  _, err := db.Exec(`INSERT INTO users (
-    email,
-    password
-  ) VALUES (?, ?)`,
-    user.Email,
-    hashedPassword,
-  )
+func DeleteUser(uid string) error {
+  _, err := db.Exec("DELETE from users WHERE id = ?", uid)
   if err != nil {
-    return User{}, err
+    return err
   }
-
-  return user, nil
+  return nil
 }
-
-func LoginUser(user User) (UserLogged, error) {
-  var userLogged UserLogged
-  err := db.QueryRow("SELECT id, password FROM users WHERE email = ?", user.Email).Scan(&userLogged.Id, &userLogged.Password)
-  if err != nil {
-    return UserLogged{}, err
-  }
-
-  error := bcrypt.CompareHashAndPassword([]byte(userLogged.Password), []byte(user.Password)) 
-  
-  if error != nil {
-    return UserLogged{}, error
-  }
-
-  return userLogged, nil
-}
-

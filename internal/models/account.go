@@ -11,16 +11,17 @@ type Account struct {
 	Type     string  `json:"type"`     // Type of account (e.g., "Bank", "Credit Card", "Cash")
 	Currency string  `json:"currency"` // Currency of the account (e.g., "USD", "EUR")
 	Balance  float64 `json:"balance"`  // Balance of the account (optional)
+  UserID   string  `json:"user_id"`
 }
 
-func GetAccounts(id string) ([]Account, error) {
-	query := "SELECT id, name, type, currency, balance FROM accounts"
+func GetAccounts(id string, uid string) ([]Account, error) {
+	query := "SELECT id, name, type, currency, balance FROM accounts WHERE user_id = ?"
 
 	if id != "" {
-		query += " WHERE id = ?"
+		query += "AND id = ?"
 	}
 
-	rows, err := db.Query(query, id)
+	rows, err := db.Query(query, uid, id)
 
 	if err != nil {
 		return nil, err
@@ -49,11 +50,11 @@ func GetAccounts(id string) ([]Account, error) {
 	return accounts, nil
 }
 
-func GetAccountByID(id int) (Account, error) {
-	query := "SELECT id, name, type, currency, balance FROM accounts WHERE id = ?"
+func GetAccountByID(id int, uid string) (Account, error) {
+	query := "SELECT id, name, type, currency, balance FROM accounts WHERE id = ? AND user_id = ?"
 
 	var account Account
-	if err := db.QueryRow(query, id).Scan(
+	if err := db.QueryRow(query, id, uid).Scan(
 		&account.ID,
 		&account.Name,
 		&account.Type,
@@ -66,17 +67,19 @@ func GetAccountByID(id int) (Account, error) {
 	return account, nil
 }
 
-func AddAccount(acccount Account) (Account, error) {
+func AddAccount(account Account) (Account, error) {
 	result, err := db.Exec(`INSERT INTO accounts (
 		name,
 		type,
 		currency,
 		balance
-	) VALUES (?, ?, ?, ?)`,
-		acccount.Name,
-		acccount.Type,
-		acccount.Currency,
-		acccount.Balance,
+    user_id,
+	) VALUES (?, ?, ?, ?, ?)`,
+		account.Name,
+		account.Type,
+		account.Currency,
+		account.Balance,
+    account.UserID,
 	)
 	if err != nil {
 		return Account{}, err
@@ -86,10 +89,10 @@ func AddAccount(acccount Account) (Account, error) {
 	if err != nil {
 		log.Println("Warning: Could not retrieve last insert ID for account")
 	} else {
-		acccount.ID = int(lastID)
+		account.ID = int(lastID)
 	}
 
-	return acccount, nil
+	return account, nil
 }
 
 func UpdateAccount(account Account) (Account, error) {
@@ -120,10 +123,10 @@ func UpdateAccount(account Account) (Account, error) {
 	return account, nil
 }
 
-func DeleteAccount(id int) (Account, error) {
-	query := "DELETE FROM accounts WHERE id = ?"
+func DeleteAccount(id int, uid string) (Account, error) {
+	query := "DELETE FROM accounts WHERE id = ? AND user_id = ?"
 
-	result, err := db.Exec(query, id)
+	result, err := db.Exec(query, id, uid)
 	if err != nil {
 		return Account{}, err
 	}

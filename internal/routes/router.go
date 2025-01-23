@@ -2,6 +2,7 @@ package routes
 
 import (
 	"guilliman/internal/controller"
+	"guilliman/internal/middleware"
 
 	"github.com/gin-gonic/gin"
 	swaggerFiles "github.com/swaggo/files"
@@ -14,21 +15,21 @@ func SetupRouter() *gin.Engine {
 
 	v1 := r.Group("/api/v1")
 	{
-		categories := v1.Group("/categories")
+		categories := v1.Group("/categories", middleware.AuthMiddleware())
 		{
 			categories.GET("", c.GetCategoriesController)
 			categories.POST("", c.CreateCategoryController)
-			// categories.PUT("/categories/:id", c.UpdateCategoryController)
-			// categories.DELETE("/categories/:id", c.DeleteCategoryController)
+			categories.PUT("/categories/:id", c.UpdateCategoryController)
+			categories.DELETE("/categories/:id", c.DeleteCategoryController)
 		}
-		accounts := v1.Group("/accounts")
+		accounts := v1.Group("/accounts", middleware.AuthMiddleware())
 		{
 			accounts.GET("", c.GetAccountsController)
 			accounts.POST("", c.AddAccountController)
 			// accounts.PUT("/accounts/:id", c.UpdateAccountController)
 			accounts.DELETE(":id", c.DeleteAccountController)
 		}
-		transactions := v1.Group("/transactions")
+		transactions := v1.Group("/transactions", middleware.AuthMiddleware())
 		{
 			transactions.GET("", c.GetTransactionsController)
 			transactions.POST("", c.AddTransactionController)
@@ -48,26 +49,25 @@ func SetupRouter() *gin.Engine {
 			// Transactions by account
 			transactions.GET("/account/:id", c.GetTransactionsByAccountController)
 		}
-		budget := v1.Group("/budget")
+		budget := v1.Group("/budget", middleware.AuthMiddleware())
 		{
 			budget.GET("/summary", c.GetBudgetSummaryController)
 		}
-		transfers := v1.Group("/transfers")
+		transfers := v1.Group("/transfers", middleware.AuthMiddleware())
 		{
 			transfers.GET("", c.GetTransfersController)
 			transfers.POST("", c.TransferFundsController)
 		}
-		reset := v1.Group("/reset")
+		reset := v1.Group("/reset", middleware.AuthMiddleware())
 		{
 			reset.POST("", c.ResetController)
 		}
-    user := v1.Group("/user") 
+    user := v1.Group("/user", middleware.AuthMiddleware())
     {
-      user.POST("/register", c.RegisterUserController)
-      user.POST("/login", c.LoginUserController)
-      user.POST("/reset", c.ResetUserController)
+      user.POST("/create", c.CreateUserController)
+      // user.POST("/delete", c.DeleteUserController)
     }
-	}
+  }
 	// Health
 	// r.GET("/health", c.HealthCheckController)
 

@@ -5,6 +5,7 @@ import (
 	"guilliman/config"
 	"guilliman/internal/models"
 	"guilliman/internal/routes"
+  "guilliman/cmd/firebase"
 	"log"
 	"os"
 	"os/signal"
@@ -50,6 +51,12 @@ func main() {
 	if err := models.SeedCategories(); err != nil {
 		log.Fatalf("Failed to seed categories: %v", err)
 	}
+
+  // Init Firebase
+  err := firebase.InitFirebase()
+  if err != nil {
+    fmt.Printf("Failed to initialize Firebase: %v", err)
+  }
 
 	router := routes.SetupRouter()
 
