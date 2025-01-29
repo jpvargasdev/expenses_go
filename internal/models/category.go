@@ -10,10 +10,11 @@ type Category struct {
 	ID           int    `json:"id"`
 	Name         string `json:"name"`
 	MainCategory string `json:"main_category"`
+	UserID       string `json:"user_id"`
 }
 
-func GetCategories() ([]Category, error) {
-	rows, err := db.Query("SELECT id, name, main_category FROM categories")
+func GetCategories(uid string) ([]Category, error) {
+	rows, err := db.Query("SELECT id, name, main_category FROM categories WHERE user_id = ?", uid)
 	if err != nil {
 		return nil, err
 	}
@@ -51,12 +52,42 @@ func AddCategory(category Category) (Category, error) {
 	return category, nil
 }
 
+func UpdateCategory(category Category) (Category, error) {
+	_, err := db.Exec(
+		"Update categories SET name = ?, main_category = ? WHERE id = ? AND user_id = ?",
+		category.Name,
+		category.MainCategory,
+		category.ID,
+		category.UserID,
+	)
+
+	if err != nil {
+		log.Println("Warning: Could not retrieve last insert ID for category")
+	}
+
+	return category, nil
+}
+
+func DeleteCategory(category Category) error {
+	_, err := db.Exec(
+		"DELETE FROM categories WHERE id = ? AND user_id = ?",
+		category.ID,
+		category.UserID,
+	)
+
+	if err != nil {
+		log.Println("Warning: Could not retrieve last insert ID for category")
+	}
+
+	return nil
+}
+
 func GetMainCategory(id int) (string, error) {
 	var mainCategory string
 	err := db.QueryRow("SELECT main_category FROM categories WHERE id = ?", id).Scan(&mainCategory)
 	if err != nil {
 		if err == sql.ErrNoRows {
-			return "", fmt.Errorf("subcategory '%s' not found in categories table", string(id))
+			return "", fmt.Errorf("subcategory '%s' not found in categories table", fmt.Sprint(rune(id)))
 		}
 		return "", err
 	}
@@ -68,7 +99,7 @@ func GetSubCategory(id int) (string, error) {
 	err := db.QueryRow("SELECT name FROM categories WHERE id = ?", id).Scan(&subCategory)
 	if err != nil {
 		if err == sql.ErrNoRows {
-			return "", fmt.Errorf("subcategory '%s' not found in categories table", string(id))
+			return "", fmt.Errorf("subcategory '%s' not found in categories table", fmt.Sprint(rune(id)))
 		}
 		return "", err
 	}

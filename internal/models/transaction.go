@@ -39,9 +39,10 @@ type Transaction struct {
 	RelatedAccountID     int     `json:"related_account_id"`
 	TransactionType      string  `json:"transaction_type"`
 	Fees                 int     `json:"fees"`
+	UserID               string  `json:"user_id"`
 }
 
-func GetTransactionsByMainCategory(mainCategory string, startDay string, endDay string) ([]Transaction, error) {
+func GetTransactionsByMainCategory(mainCategory string, startDay string, endDay string, uid string) ([]Transaction, error) {
 	var start, end int64
 
 	startDate, endDate := timeutils.GetSalaryMonthRange(startDay, endDay)
@@ -66,6 +67,9 @@ func GetTransactionsByMainCategory(mainCategory string, startDay string, endDay 
 
 	var conditions []string
 	var args []interface{}
+
+	conditions = append(conditions, "user_id = ?")
+	args = append(args, uid)
 
 	if mainCategory != "" {
 		conditions = append(conditions, "main_category = ?")
@@ -111,7 +115,42 @@ func GetTransactionsByMainCategory(mainCategory string, startDay string, endDay 
 	return transactions, nil
 }
 
-func GetTransactions(transactionType string, accountId int) ([]Transaction, error) {
+func GetTransactionByID(transactionID int, userID string) (Transaction, error) {
+	var transaction Transaction
+
+	query := `SELECT 
+		id, description, amount, currency, amount_in_base_currency, exchange_rate, 
+		date, main_category, subcategory, category_id, account_id, 
+		related_account_id, transaction_type
+	FROM transactions 
+	WHERE id = ? AND user_id = ?`
+
+	err := db.QueryRow(query, transactionID, userID).Scan(
+		&transaction.ID,
+		&transaction.Description,
+		&transaction.Amount,
+		&transaction.Currency,
+		&transaction.AmountInBaseCurrency,
+		&transaction.ExchangeRate,
+		&transaction.Date,
+		&transaction.MainCategory,
+		&transaction.Subcategory,
+		&transaction.CategoryID,
+		&transaction.AccountID,
+		&transaction.RelatedAccountID,
+		&transaction.TransactionType,
+	)
+	if err != nil {
+		if err == sql.ErrNoRows {
+			return Transaction{}, fmt.Errorf("transaction not found")
+		}
+		return Transaction{}, fmt.Errorf("failed to retrieve transaction: %v", err)
+	}
+
+	return transaction, nil
+}
+
+func GetTransactions(transactionType string, accountId int, uid string) ([]Transaction, error) {
 	query := `SELECT 
 	  id,	
 	  description,	
@@ -130,6 +169,9 @@ func GetTransactions(transactionType string, accountId int) ([]Transaction, erro
 
 	var conditions []string
 	var args []interface{}
+
+	conditions = append(conditions, "user_id = ?")
+	args = append(args, uid)
 
 	if transactionType != "" {
 		conditions = append(conditions, "transaction_type = ?")
@@ -177,7 +219,7 @@ func GetTransactions(transactionType string, accountId int) ([]Transaction, erro
 	return transactions, nil
 }
 
-func GetTransactionsForPeriod(start int64, end int64, transactionType string, accountId int) ([]Transaction, error) {
+func GetTransactionsForPeriod(start int64, end int64, transactionType string, accountId int, uid string) ([]Transaction, error) {
 	query := `SELECT 
 	  id,	
 	  description,	
@@ -196,6 +238,9 @@ func GetTransactionsForPeriod(start int64, end int64, transactionType string, ac
 
 	var conditions []string
 	var args []interface{}
+
+	conditions = append(conditions, "user_id = ?")
+	args = append(args, uid)
 
 	if transactionType != "" {
 		conditions = append(conditions, "transaction_type = ?")
@@ -248,7 +293,7 @@ func GetTransactionsForPeriod(start int64, end int64, transactionType string, ac
 * Can add TransactionType = "expense", "income"
  */
 func AddTransaction(transaction Transaction) (Transaction, error) {
-	sourceAccount, err := GetAccountByID(transaction.AccountID)
+	sourceAccount, err := GetAccountByID(transaction.AccountID, transaction.UserID)
 	if err != nil {
 		return Transaction{}, fmt.Errorf("invalid account: %v", err)
 	}
@@ -319,8 +364,9 @@ func AddTransaction(transaction Transaction) (Transaction, error) {
 		  category_id,
 		  account_id,
 		  related_account_id,
-		  transaction_type
-		) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+		  transaction_type,
+      user_id
+		) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
 		transaction.Description,
 		transaction.Amount,
 		transaction.Currency,
@@ -333,6 +379,7 @@ func AddTransaction(transaction Transaction) (Transaction, error) {
 		transaction.AccountID,
 		transaction.RelatedAccountID,
 		transaction.TransactionType,
+		transaction.UserID,
 	)
 	if err != nil {
 		tx.Rollback()
@@ -357,6 +404,109 @@ func AddTransaction(transaction Transaction) (Transaction, error) {
 	}
 
 	return transaction, nil
+}
+
+func UpdateTransaction(transactionID int, updatedTransaction Transaction) (Transaction, error) {
+	// Retrieve the existing transaction
+	existingTransaction, err := GetTransactionByID(transactionID, updatedTransaction.UserID)
+	if err != nil {
+		return Transaction{}, fmt.Errorf("transaction not found: %v", err)
+	}
+
+	// Ensure the category exists
+	mainCategory, err := GetMainCategory(updatedTransaction.CategoryID)
+	if err != nil {
+		return Transaction{}, fmt.Errorf("invalid subcategory: %v", err)
+	}
+	subcategory, err := GetSubCategory(updatedTransaction.CategoryID)
+	if err != nil {
+		return Transaction{}, fmt.Errorf("invalid subcategory: %v", err)
+	}
+	updatedTransaction.MainCategory = mainCategory
+	updatedTransaction.Subcategory = subcategory
+
+	// Handle currency conversion if the currency changed
+	if updatedTransaction.Currency != existingTransaction.Currency {
+		rate, err := utils.GetExchangeRate(updatedTransaction.Currency)
+		if err != nil {
+			log.Printf("Warning: Exchange rate not found for currency '%s'. Transaction will be saved without conversion.", updatedTransaction.Currency)
+			updatedTransaction.ExchangeRate = 0
+			updatedTransaction.AmountInBaseCurrency = 0
+		} else {
+			updatedTransaction.ExchangeRate = rate
+			updatedTransaction.AmountInBaseCurrency = updatedTransaction.Amount * rate
+		}
+	} else {
+		// Retain the previous exchange rate if the currency hasn't changed
+		updatedTransaction.ExchangeRate = existingTransaction.ExchangeRate
+		updatedTransaction.AmountInBaseCurrency = updatedTransaction.Amount * existingTransaction.ExchangeRate
+	}
+
+	// Start a database transaction
+	tx, err := db.Begin()
+	if err != nil {
+		return Transaction{}, fmt.Errorf("failed to start database transaction: %v", err)
+	}
+	defer func() {
+		if r := recover(); r != nil {
+			tx.Rollback()
+			log.Printf("Recovered from panic: %v", r)
+		}
+	}()
+
+	// Adjust the account balance: First revert the old transaction
+	_, err = tx.Exec(
+		`UPDATE accounts SET balance = balance - ? WHERE id = ?`,
+		existingTransaction.Amount, existingTransaction.AccountID,
+	)
+	if err != nil {
+		tx.Rollback()
+		return Transaction{}, fmt.Errorf("failed to revert old transaction amount: %v", err)
+	}
+
+	// Then apply the updated transaction amount
+	_, err = tx.Exec(
+		`UPDATE accounts SET balance = balance + ? WHERE id = ?`,
+		updatedTransaction.Amount, updatedTransaction.AccountID,
+	)
+	if err != nil {
+		tx.Rollback()
+		return Transaction{}, fmt.Errorf("failed to update account balance: %v", err)
+	}
+
+	// Update the transaction in the database
+	_, err = tx.Exec(
+		`UPDATE transactions SET
+		  description = ?, amount = ?, currency = ?, amount_in_base_currency = ?, exchange_rate = ?, 
+		  date = ?, main_category = ?, subcategory = ?, category_id = ?, account_id = ?, 
+		  related_account_id = ?, transaction_type = ?
+		WHERE id = ?`,
+		updatedTransaction.Description,
+		updatedTransaction.Amount,
+		updatedTransaction.Currency,
+		updatedTransaction.AmountInBaseCurrency,
+		updatedTransaction.ExchangeRate,
+		updatedTransaction.Date,
+		updatedTransaction.MainCategory,
+		updatedTransaction.Subcategory,
+		updatedTransaction.CategoryID,
+		updatedTransaction.AccountID,
+		updatedTransaction.RelatedAccountID,
+		updatedTransaction.TransactionType,
+		transactionID,
+	)
+	if err != nil {
+		tx.Rollback()
+		return Transaction{}, fmt.Errorf("failed to update transaction: %v", err)
+	}
+
+	// Commit the transaction
+	err = tx.Commit()
+	if err != nil {
+		return Transaction{}, fmt.Errorf("failed to commit database transaction: %v", err)
+	}
+
+	return updatedTransaction, nil
 }
 
 /**
@@ -423,7 +573,8 @@ func AddTransfer(transaction Transaction) (Transaction, error) {
 		  account_id,
 		  related_account_id,
 		  transaction_type,
-		  fees
+		  fees,
+      	  user_id
 		) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
 		transaction.Description,
 		transaction.Amount,
@@ -438,6 +589,7 @@ func AddTransfer(transaction Transaction) (Transaction, error) {
 		transaction.RelatedAccountID,
 		transaction.TransactionType,
 		transaction.Fees,
+		transaction.UserID,
 	)
 	if err != nil {
 		tx.Rollback()
@@ -556,7 +708,7 @@ func DeleteTransaction(id int) error {
 	return nil
 }
 
-func GetTransactionsByAccount(accountID string) ([]Transaction, error) {
+func GetTransactionsByAccount(accountID string, uid string) ([]Transaction, error) {
 	// Prepare the SQL query
 	query := `
 		SELECT 
@@ -575,14 +727,14 @@ func GetTransactionsByAccount(accountID string) ([]Transaction, error) {
 			transaction_type, 
 			fees 
 		FROM transactions 
-		WHERE account_id = ?
+		WHERE account_id = ? AND user_id = ?
 	`
 
 	// Initialize a slice to hold the transactions
 	var transactions []Transaction
 
 	// Execute the query
-	rows, err := db.Query(query, accountID)
+	rows, err := db.Query(query, accountID, uid)
 	if err != nil {
 		return nil, fmt.Errorf("failed to fetch transactions: %w", err)
 	}

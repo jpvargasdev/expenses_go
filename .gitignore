@@ -32,3 +32,4 @@ go.work
 .env
 
 *.db
+*firebase**.json
