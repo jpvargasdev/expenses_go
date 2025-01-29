@@ -11,17 +11,19 @@ type Account struct {
 	Type     string  `json:"type"`     // Type of account (e.g., "Bank", "Credit Card", "Cash")
 	Currency string  `json:"currency"` // Currency of the account (e.g., "USD", "EUR")
 	Balance  float64 `json:"balance"`  // Balance of the account (optional)
-	UserID   string  `json:"user_id"`
+  UserID   string  `json:"user_id"`
 }
 
 func GetAccounts(id string, uid string) ([]Account, error) {
-	query := "SELECT id, name, type, currency, balance FROM accounts WHERE user_id = ?"
+	query := "SELECT id, name, type, currency, balance FROM accounts"
+
+  query += fmt.Sprintf(" WHERE user_id = '%s'", uid)
 
 	if id != "" {
-		query += "AND id = ?"
+		query += " AND WHERE id = ?"
 	}
 
-	rows, err := db.Query(query, uid, id)
+	rows, err := db.Query(query, id)
 
 	if err != nil {
 		return nil, err
@@ -67,19 +69,19 @@ func GetAccountByID(id int, uid string) (Account, error) {
 	return account, nil
 }
 
-func AddAccount(account Account) (Account, error) {
+func AddAccount(acccount Account) (Account, error) {
 	result, err := db.Exec(`INSERT INTO accounts (
 		name,
 		type,
 		currency,
-		balance
-    user_id,
+		balance,
+    user_id
 	) VALUES (?, ?, ?, ?, ?)`,
-		account.Name,
-		account.Type,
-		account.Currency,
-		account.Balance,
-		account.UserID,
+		acccount.Name,
+		acccount.Type,
+		acccount.Currency,
+		acccount.Balance,
+    acccount.UserID,
 	)
 	if err != nil {
 		return Account{}, err
@@ -89,10 +91,10 @@ func AddAccount(account Account) (Account, error) {
 	if err != nil {
 		log.Println("Warning: Could not retrieve last insert ID for account")
 	} else {
-		account.ID = int(lastID)
+		acccount.ID = int(lastID)
 	}
 
-	return account, nil
+	return acccount, nil
 }
 
 func UpdateAccount(account Account) (Account, error) {
@@ -126,7 +128,7 @@ func UpdateAccount(account Account) (Account, error) {
 func DeleteAccount(id int, uid string) (Account, error) {
 	query := "DELETE FROM accounts WHERE id = ? AND user_id = ?"
 
-	result, err := db.Exec(query, id, uid)
+	result, err := db.Exec(query, id)
 	if err != nil {
 		return Account{}, err
 	}
