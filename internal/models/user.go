@@ -3,15 +3,15 @@ package models
 import "fmt"
 
 type User struct {
-	ID            string `json:"id"`
-	Email         string `json:"email"`
-	DisplayName   string `json:"display_name"`
-  PhoneNumber   string `json:"phone_number"`
-  PhotoUrl      string `json:"photo_url`
+	ID          string `json:"id"`
+	Email       string `json:"email"`
+	DisplayName string `json:"display_name"`
+	PhoneNumber string `json:"phone_number"`
+	PhotoUrl    string `json:"photo_url"`
 }
 
 func CreateUser(user User) error {
-  // Check if the user already exists in the database
+	// Check if the user already exists in the database
 	var exists bool
 	err := db.QueryRow("SELECT EXISTS(SELECT 1 FROM users WHERE id = ?)", user.ID).Scan(&exists)
 	if err != nil {
@@ -19,7 +19,7 @@ func CreateUser(user User) error {
 	}
 
 	if exists {
-		return fmt.Errorf("User already exists") 
+		return fmt.Errorf("User already exists")
 	}
 
 	// Insert the new user into the database
@@ -32,13 +32,13 @@ func CreateUser(user User) error {
 		return err
 	}
 
-  return nil
+	return nil
 }
 
 func DeleteUser(uid string) error {
-  _, err := db.Exec("DELETE from users WHERE id = ?", uid)
-  if err != nil {
-    return err
-  }
-  return nil
+	_, err := db.Exec("DELETE from users WHERE id = ?", uid)
+	if err != nil {
+		return err
+	}
+	return nil
 }

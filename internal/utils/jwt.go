@@ -1,34 +1,25 @@
 package utils
 
 import (
-	"errors"
-	"guilliman/config"
-	"time"
+	"fmt"
+	"net/http"
 
-	"github.com/golang-jwt/jwt/v5"
+	"github.com/gin-gonic/gin"
 )
 
-func GenerateToken(userID int) (string, error) {
-  claims := jwt.MapClaims{
-    "user_id": userID,
-    "exp": time.Now().Add(time.Hour * 24 * 7).Unix(), // Should we add more time? maybe not expiring time??
-  }
-  token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
-  return token.SignedString(config.GetSecretKey())
-}
+func GetUserUID(c *gin.Context) (string, error) {
+	userUID, exists := c.Get("userUID")
+	if !exists {
+		c.JSON(401, gin.H{"error": "User not authenticated"})
+		return "", fmt.Errorf("User not authenticated")
+	}
 
-func ValidateToken(tokenString string) error {
-  token, err := jwt.Parse(tokenString, func(token *jwt.Token) (interface{}, error) {
-    return config.GetSecretKey(), nil
-  })
+	uid, ok := userUID.(string)
 
-  if err != nil {
-    return err
-  }
+	if !ok {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to get user UID"})
+		return "", fmt.Errorf("Failed to get user UID")
+	}
 
-  if !token.Valid {
-    return errors.New("invalid token")
-  }
-
-  return nil
+	return uid, nil
 }

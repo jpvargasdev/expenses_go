@@ -2,7 +2,7 @@ package middleware
 
 import (
 	"context"
-	"guilliman/cmd/firebase"
+	"guilliman/cmd/auth"
 	"log"
 	"net/http"
 	"strings"
@@ -11,21 +11,21 @@ import (
 )
 
 func AuthMiddleware() gin.HandlerFunc {
-  return func(c *gin.Context) {
-    authHeader := c.GetHeader("Authorization")
-    if authHeader == "" || !strings.HasPrefix(authHeader, "Bearer ") {
-      c.JSON(http.StatusUnauthorized, gin.H{"error": "Missing or invalid Authorization header"})
+	return func(c *gin.Context) {
+		authHeader := c.GetHeader("Authorization")
+		if authHeader == "" || !strings.HasPrefix(authHeader, "Bearer ") {
+			c.JSON(http.StatusUnauthorized, gin.H{"error": "Missing or invalid Authorization header"})
 			c.Abort()
 			return
-    }
+		}
 
-    // Extract the token
+		// Extract the token
 		idToken := strings.TrimPrefix(authHeader, "Bearer ")
 
 		// Get Firebase Auth client
-		client, err := firebase.FirebaseApp.Auth(context.Background())
+		client, err := auth.FirebaseApp.Auth(context.Background())
 		if err != nil {
-      log.Printf("Error getting Firebase Auth: %v", err)
+			log.Printf("Error getting Firebase Auth: %v", err)
 			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to initialize Firebase Auth"})
 			c.Abort()
 			return
@@ -42,5 +42,5 @@ func AuthMiddleware() gin.HandlerFunc {
 		// Attach the UID to the context
 		c.Set("userUID", token.UID)
 		c.Next()
-  }
+	}
 }

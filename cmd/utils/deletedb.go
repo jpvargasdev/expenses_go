@@ -1,9 +1,9 @@
-package main 
+package main
 
 import (
-  "guilliman/internal/models"
+	"guilliman/internal/models"
 )
 
 func main() {
-  models.ClearDatabase()
+	models.ClearDatabase()
 }

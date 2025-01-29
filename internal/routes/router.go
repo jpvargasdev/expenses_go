@@ -19,21 +19,22 @@ func SetupRouter() *gin.Engine {
 		{
 			categories.GET("", c.GetCategoriesController)
 			categories.POST("", c.CreateCategoryController)
-			categories.PUT("/categories/:id", c.UpdateCategoryController)
-			categories.DELETE("/categories/:id", c.DeleteCategoryController)
+			categories.PUT("/:id", c.UpdateCategoryController)
+			categories.DELETE("/:id", c.DeleteCategoryController)
 		}
 		accounts := v1.Group("/accounts", middleware.AuthMiddleware())
 		{
 			accounts.GET("", c.GetAccountsController)
 			accounts.POST("", c.AddAccountController)
-			// accounts.PUT("/accounts/:id", c.UpdateAccountController)
+			accounts.PUT("/accounts/:id", c.UpdateAccountController)
 			accounts.DELETE(":id", c.DeleteAccountController)
 		}
 		transactions := v1.Group("/transactions", middleware.AuthMiddleware())
 		{
 			transactions.GET("", c.GetTransactionsController)
+			transactions.GET("/:id", c.GetTransactionByIdController)
 			transactions.POST("", c.AddTransactionController)
-			// transactions.PUT("/transactions/:id", c.UpdateTransactionController)
+			transactions.PUT("/:id", c.UpdateTransactionController)
 			transactions.DELETE(":id", c.DeleteTransactionController)
 
 			// Transaccions by type
@@ -62,12 +63,12 @@ func SetupRouter() *gin.Engine {
 		{
 			reset.POST("", c.ResetController)
 		}
-    user := v1.Group("/user", middleware.AuthMiddleware())
-    {
-      user.POST("/create", c.CreateUserController)
-      // user.POST("/delete", c.DeleteUserController)
-    }
-  }
+		user := v1.Group("/users", middleware.AuthMiddleware())
+		{
+			user.POST("/create", c.CreateUserController)
+			// user.POST("/delete", c.DeleteUserController)
+		}
+	}
 	// Health
 	// r.GET("/health", c.HealthCheckController)
 

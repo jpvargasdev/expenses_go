@@ -11,7 +11,7 @@ type Account struct {
 	Type     string  `json:"type"`     // Type of account (e.g., "Bank", "Credit Card", "Cash")
 	Currency string  `json:"currency"` // Currency of the account (e.g., "USD", "EUR")
 	Balance  float64 `json:"balance"`  // Balance of the account (optional)
-  UserID   string  `json:"user_id"`
+	UserID   string  `json:"user_id"`
 }
 
 func GetAccounts(id string, uid string) ([]Account, error) {
@@ -79,7 +79,7 @@ func AddAccount(account Account) (Account, error) {
 		account.Type,
 		account.Currency,
 		account.Balance,
-    account.UserID,
+		account.UserID,
 	)
 	if err != nil {
 		return Account{}, err

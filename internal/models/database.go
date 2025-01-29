@@ -155,7 +155,7 @@ func CreateTables() error {
     FOREIGN KEY (user_id) REFERENCES users(id)
 	);`
 
-  userTable := `CREATE TABLE IF NOT EXISTS users (
+	userTable := `CREATE TABLE IF NOT EXISTS users (
     id TEXT,
     email TEXT,
     display_name TEXT,
@@ -182,11 +182,11 @@ func CreateTables() error {
 		return err
 	}
 
-  _, err = db.Exec(userTable)
-  if err != nil {
-    log.Fatalf("Failed to create users table :%v", err)
-    return err
-  }
+	_, err = db.Exec(userTable)
+	if err != nil {
+		log.Fatalf("Failed to create users table :%v", err)
+		return err
+	}
 
 	log.Println("Tables created successfully")
 	return nil

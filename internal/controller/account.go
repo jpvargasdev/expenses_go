@@ -2,6 +2,7 @@ package controller
 
 import (
 	"guilliman/internal/models"
+	"guilliman/internal/utils"
 	"log"
 	"net/http"
 	"strconv"
@@ -23,16 +24,11 @@ import (
 // @Router       /accounts/{id} [get]
 
 func (h *Controller) GetAccountsController(c *gin.Context) {
-  userUID, exists := c.Get("userUID")
-  if !exists {
-		c.JSON(401, gin.H{"error": "User not authenticated"})
+	uid, err := utils.GetUserUID(c)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
-  uid, ok := userUID.(string)
-  if !ok {
-    c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to get user UID"})
-    return
-  }
 
 	accountId := c.Param("id")
 
@@ -45,16 +41,11 @@ func (h *Controller) GetAccountsController(c *gin.Context) {
 }
 
 func (h *Controller) AddAccountController(c *gin.Context) {
-  userUID, exists := c.Get("userUID")
-  if !exists {
-		c.JSON(401, gin.H{"error": "User not authenticated"})
+	uid, err := utils.GetUserUID(c)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
-  uid, ok := userUID.(string)
-  if !ok {
-    c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to get user UID"})
-    return
-  }
 
 	var newAccount models.Account
 	if err := c.ShouldBindJSON(&newAccount); err != nil {
@@ -62,7 +53,7 @@ func (h *Controller) AddAccountController(c *gin.Context) {
 		return
 	}
 
-  newAccount.UserID = uid
+	newAccount.UserID = uid
 
 	account, err := models.AddAccount(newAccount) // Add account to storage
 	if err != nil {
@@ -75,16 +66,11 @@ func (h *Controller) AddAccountController(c *gin.Context) {
 }
 
 func (h *Controller) UpdateAccountController(c *gin.Context) {
-  userUID, exists := c.Get("userUID")
-  if !exists {
-		c.JSON(401, gin.H{"error": "User not authenticated"})
+	uid, err := utils.GetUserUID(c)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
-  uid, ok := userUID.(string)
-  if !ok {
-    c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to get user UID"})
-    return
-  }
 
 	var newAccount models.Account
 	if err := c.ShouldBindJSON(&newAccount); err != nil {
@@ -92,7 +78,7 @@ func (h *Controller) UpdateAccountController(c *gin.Context) {
 		return
 	}
 
-  newAccount.UserID = uid
+	newAccount.UserID = uid
 
 	account, err := models.UpdateAccount(newAccount) // Add account to storage
 	if err != nil {
@@ -105,16 +91,11 @@ func (h *Controller) UpdateAccountController(c *gin.Context) {
 }
 
 func (h *Controller) DeleteAccountController(c *gin.Context) {
-  userUID, exists := c.Get("userUID")
-  if !exists {
-		c.JSON(401, gin.H{"error": "User not authenticated"})
+	uid, err := utils.GetUserUID(c)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
-  uid, ok := userUID.(string)
-  if !ok {
-    c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to get user UID"})
-    return
-  }
 
 	idParam := c.Param("id")
 	id, err := strconv.Atoi(idParam)
@@ -124,7 +105,7 @@ func (h *Controller) DeleteAccountController(c *gin.Context) {
 	}
 
 	account, err := models.DeleteAccount(id, uid) // delete account
-  if err != nil {
+	if err != nil {
 		// You can log the error or return it, depending on your application's needs
 		log.Printf("Error adding account: %v", err)
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to delete acccount"})
