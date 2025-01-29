@@ -1,7 +1,5 @@
 package models
 
-import "fmt"
-
 type User struct {
 	ID          string `json:"id"`
 	Email       string `json:"email"`
@@ -19,13 +17,13 @@ func CreateUser(user User) error {
 	}
 
 	if exists {
-		return fmt.Errorf("User already exists")
-	}
+		return nil  
+  }
 
 	// Insert the new user into the database
 	query := `
 		INSERT INTO users (id, email, display_name, phone_number, photo_url) 
-		VALUES (?, ?)
+		VALUES (?, ?, ?, ?, ?)
 	`
 	_, err = db.Exec(query, user.ID, user.Email, user.DisplayName, user.PhoneNumber, user.PhotoUrl)
 	if err != nil {

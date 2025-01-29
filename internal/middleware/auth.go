@@ -14,6 +14,7 @@ func AuthMiddleware() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		authHeader := c.GetHeader("Authorization")
 		if authHeader == "" || !strings.HasPrefix(authHeader, "Bearer ") {
+      log.Printf("Missing or invalid Authorization header")
 			c.JSON(http.StatusUnauthorized, gin.H{"error": "Missing or invalid Authorization header"})
 			c.Abort()
 			return
@@ -34,6 +35,7 @@ func AuthMiddleware() gin.HandlerFunc {
 		// Verify the token
 		token, err := client.VerifyIDToken(context.Background(), idToken)
 		if err != nil {
+      log.Printf("Invalid Token: %v", err)
 			c.JSON(http.StatusUnauthorized, gin.H{"error": "Invalid token"})
 			c.Abort()
 			return
