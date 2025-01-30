@@ -12,7 +12,7 @@ type Category struct {
 	MainCategory string `json:"main_category"`
 }
 
-func GetCategories(uid string) ([]Category, error) {
+func GetCategories() ([]Category, error) {
 	rows, err := db.Query("SELECT id, name, main_category FROM categories")
 	if err != nil {
 		return nil, err
