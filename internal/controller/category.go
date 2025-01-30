@@ -2,7 +2,6 @@ package controller
 
 import (
 	"guilliman/internal/models"
-	"guilliman/internal/utils"
 	"log"
 	"net/http"
 
@@ -35,6 +34,11 @@ func (h *Controller) CreateCategoryController(c *gin.Context) {
 }
 
 func (h *Controller) UpdateCategoryController(c *gin.Context) {
+  var updatedCategory models.Category
+  if err := c.ShouldBindJSON(&updatedCategory); err != nil {
+    c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+    return
+  }
 	category, err := models.UpdateCategory(updatedCategory)
 	if err != nil {
 		log.Printf("Error updating category: %v", err)
