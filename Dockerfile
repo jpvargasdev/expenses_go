@@ -41,6 +41,7 @@ COPY wsgi.py .
 
 # Ensure entrypoint.sh is executable
 RUN chmod +x ./entrypoint.sh
+RUN echo "$GOOGLE_APPLICATION_CREDENTIALS_JSON" > /app/firebase-config.json
 
 # Expose ports (Go app and sqlite_web)
 EXPOSE 8080 8081
