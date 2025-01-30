@@ -130,13 +130,21 @@ func (h *Controller) GetTransactionByIdController(c *gin.Context) {
 }
 
 func (h *Controller) AddTransactionController(c *gin.Context) {
-	var transaction models.Transaction
-	if err := c.ShouldBindJSON(&transaction); err != nil {
+  uid, err := utils.GetUserUID(c)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	var newTransaction models.Transaction
+	if err := c.ShouldBindJSON(&newTransaction); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
 
-	transaction, err := models.AddTransaction(transaction)
+  newTransaction.UserID = uid
+
+	transaction, err := models.AddTransaction(newTransaction)
 	if err != nil {
 		log.Printf("Error adding transaction: %v", err)
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to add transaction"})
