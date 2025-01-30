@@ -116,7 +116,6 @@ func CreateTables() error {
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     name TEXT UNIQUE NOT NULL,         -- Name of the subcategory
     main_category TEXT NOT NULL,       -- Main category (Needs, Wants, Savings, Transfer)
-    user_id TEXT,                   -- User who owns the category
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP, -- Timestamp when the category was created
     FOREIGN KEY (user_id) REFERENCES users(id)
   );`

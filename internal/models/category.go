@@ -10,11 +10,10 @@ type Category struct {
 	ID           int    `json:"id"`
 	Name         string `json:"name"`
 	MainCategory string `json:"main_category"`
-	UserID       string `json:"user_id"`
 }
 
 func GetCategories(uid string) ([]Category, error) {
-	rows, err := db.Query("SELECT id, name, main_category FROM categories WHERE user_id = ?", uid)
+	rows, err := db.Query("SELECT id, name, main_category FROM categories")
 	if err != nil {
 		return nil, err
 	}
@@ -30,7 +29,7 @@ func GetCategories(uid string) ([]Category, error) {
 	}
 
 	if err := rows.Err(); err != nil {
-		return nil, err
+    return nil, err
 	}
 
 	return categories, nil
@@ -54,11 +53,10 @@ func AddCategory(category Category) (Category, error) {
 
 func UpdateCategory(category Category) (Category, error) {
 	_, err := db.Exec(
-		"Update categories SET name = ?, main_category = ? WHERE id = ? AND user_id = ?",
+		"Update categories SET name = ?, main_category = ? WHERE id = ?",
 		category.Name,
 		category.MainCategory,
 		category.ID,
-		category.UserID,
 	)
 
 	if err != nil {
@@ -70,9 +68,8 @@ func UpdateCategory(category Category) (Category, error) {
 
 func DeleteCategory(category Category) error {
 	_, err := db.Exec(
-		"DELETE FROM categories WHERE id = ? AND user_id = ?",
+		"DELETE FROM categories WHERE id = ?",
 		category.ID,
-		category.UserID,
 	)
 
 	if err != nil {
