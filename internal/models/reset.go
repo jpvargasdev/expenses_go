@@ -6,9 +6,9 @@ import (
 
 func ResetDatabase() error {
 	err := ClearDatabase()
-	if err == nil {
+	if err != nil {
 		log.Fatalf("Failed to clear database: %v", err)
 	}
 
-	return err
+	return nil
 }
