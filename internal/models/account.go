@@ -1,30 +1,38 @@
 package models
 
 import (
+	"context"
 	"fmt"
-	"log"
+	"time"
+
+	"github.com/guregu/null/v5"
+	"github.com/jackc/pgx/v5"
 )
 
+// Account struct
 type Account struct {
-	ID       int     `json:"id"`
+	ID       string  `json:"id"`
 	Name     string  `json:"name"`     // Name of the account (e.g., "Checking Account", "Credit Card")
 	Type     string  `json:"type"`     // Type of account (e.g., "Bank", "Credit Card", "Cash")
 	Currency string  `json:"currency"` // Currency of the account (e.g., "USD", "EUR")
 	Balance  float64 `json:"balance"`  // Balance of the account (optional)
-  UserID   string  `json:"user_id"`
+	UserID   string  `json:"user_id"`
 }
 
+// GetAccounts retrieves all accounts for a user
 func GetAccounts(id string, uid string) ([]Account, error) {
-	query := "SELECT id, name, type, currency, balance FROM accounts"
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
 
-  query += fmt.Sprintf(" WHERE user_id = '%s'", uid)
+	query := "SELECT id, name, type, currency, balance FROM accounts WHERE user_id = $1"
+	args := []interface{}{uid}
 
 	if id != "" {
-		query += " AND WHERE id = ?"
+		query += " AND id = $2"
+		args = append(args, id)
 	}
 
-	rows, err := db.Query(query, id)
-
+	rows, err := db.Query(ctx, query, args...)
 	if err != nil {
 		return nil, err
 	}
@@ -33,91 +41,75 @@ func GetAccounts(id string, uid string) ([]Account, error) {
 	var accounts []Account
 	for rows.Next() {
 		var account Account
-		if err := rows.Scan(
-			&account.ID,
-			&account.Name,
-			&account.Type,
-			&account.Currency,
-			&account.Balance,
-		); err != nil {
+		if err := rows.Scan(&account.ID, &account.Name, &account.Type, &account.Currency, &account.Balance); err != nil {
 			return nil, err
 		}
 		accounts = append(accounts, account)
 	}
 
-	if err := rows.Err(); err != nil {
-		return nil, err
-	}
-
 	return accounts, nil
 }
 
-func GetAccountByID(id int, uid string) (Account, error) {
-	query := "SELECT id, name, type, currency, balance FROM accounts WHERE id = ? AND user_id = ?"
+// GetAccountByID retrieves a single account by ID and user ID
+func GetAccountByID(id null.String, uid string) (Account, error) {
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+
+	query := "SELECT id, name, type, currency, balance FROM accounts WHERE id = $1 AND user_id = $2"
 
 	var account Account
-	if err := db.QueryRow(query, id, uid).Scan(
+	err := db.QueryRow(ctx, query, id, uid).Scan(
 		&account.ID,
 		&account.Name,
 		&account.Type,
 		&account.Currency,
 		&account.Balance,
-	); err != nil {
+	)
+	if err != nil {
+		if err == pgx.ErrNoRows {
+			return Account{}, fmt.Errorf("no account found with ID %d", id)
+		}
 		return Account{}, err
 	}
 
 	return account, nil
 }
 
-func AddAccount(acccount Account) (Account, error) {
-	result, err := db.Exec(`INSERT INTO accounts (
-		name,
-		type,
-		currency,
-		balance,
-    user_id
-	) VALUES (?, ?, ?, ?, ?)`,
-		acccount.Name,
-		acccount.Type,
-		acccount.Currency,
-		acccount.Balance,
-    acccount.UserID,
-	)
+// AddAccount inserts a new account into the database
+func AddAccount(account Account) (Account, error) {
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+
+	query := `INSERT INTO accounts (name, type, currency, balance, user_id)
+	          VALUES ($1, $2, $3, $4, $5) RETURNING id`
+
+	err := db.QueryRow(ctx, query, account.Name, account.Type, account.Currency, account.Balance, account.UserID).Scan(&account.ID)
 	if err != nil {
 		return Account{}, err
 	}
 
-	lastID, err := result.LastInsertId()
-	if err != nil {
-		log.Println("Warning: Could not retrieve last insert ID for account")
-	} else {
-		acccount.ID = int(lastID)
-	}
-
-	return acccount, nil
+	return account, nil
 }
 
+// UpdateAccount updates an existing account
 func UpdateAccount(account Account) (Account, error) {
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+
 	query := `
 		UPDATE accounts
-		SET
-			name = COALESCE(?, name),
-			type = COALESCE(?, type),
-			currency = COALESCE(?, currency),
-			balance = COALESCE(?, balance)
-		WHERE id = ?`
+		SET name = COALESCE(NULLIF($1, ''), name),
+			type = COALESCE(NULLIF($2, ''), type),
+			currency = COALESCE(NULLIF($3, ''), currency),
+			balance = COALESCE(NULLIF($4, 0), balance)
+		WHERE id = $5 AND user_id = $6`
 
-	// Execute the query
-	result, err := db.Exec(query, account.Name, account.Type, account.Currency, account.Balance, account.ID)
+	result, err := db.Exec(ctx, query, account.Name, account.Type, account.Currency, account.Balance, account.ID, account.UserID)
 	if err != nil {
 		return Account{}, fmt.Errorf("failed to update account: %v", err)
 	}
 
-	// Check if the account was updated
-	rowsAffected, err := result.RowsAffected()
-	if err != nil {
-		return Account{}, fmt.Errorf("failed to fetch rows affected: %v", err)
-	}
+	rowsAffected := result.RowsAffected()
 	if rowsAffected == 0 {
 		return Account{}, fmt.Errorf("no account found with ID %d", account.ID)
 	}
@@ -125,22 +117,22 @@ func UpdateAccount(account Account) (Account, error) {
 	return account, nil
 }
 
-func DeleteAccount(id int, uid string) (Account, error) {
-	query := "DELETE FROM accounts WHERE id = ? AND user_id = ?"
+// DeleteAccount removes an account from the database
+func DeleteAccount(id string, uid string) error {
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
 
-	result, err := db.Exec(query, id)
+	query := "DELETE FROM accounts WHERE id = $1 AND user_id = $2"
+
+	result, err := db.Exec(ctx, query, id, uid)
 	if err != nil {
-		return Account{}, err
+		return err
 	}
 
-	rowsAffected, err := result.RowsAffected()
-	if err != nil {
-		return Account{}, err
-	}
-
+	rowsAffected := result.RowsAffected()
 	if rowsAffected == 0 {
-		return Account{}, fmt.Errorf("no account found with ID %d", id)
+		return fmt.Errorf("no account found with ID %d", id)
 	}
 
-	return Account{ID: id}, nil
+	return nil
 }

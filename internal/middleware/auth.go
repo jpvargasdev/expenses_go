@@ -3,6 +3,7 @@ package middleware
 import (
 	"context"
 	"guilliman/cmd/auth"
+	"guilliman/config"
 	"log"
 	"net/http"
 	"strings"
@@ -12,9 +13,16 @@ import (
 
 func AuthMiddleware() gin.HandlerFunc {
 	return func(c *gin.Context) {
+		// if environment DEV === true, then return c.Next()
+		if config.GetEnv() == "true" {
+			c.Set("userUID", "550e8400-e29b-41d4-a716-446655440000")
+			c.Next()
+			return
+		}
+
 		authHeader := c.GetHeader("Authorization")
 		if authHeader == "" || !strings.HasPrefix(authHeader, "Bearer ") {
-      log.Printf("Missing or invalid Authorization header")
+			log.Printf("Missing or invalid Authorization header")
 			c.JSON(http.StatusUnauthorized, gin.H{"error": "Missing or invalid Authorization header"})
 			c.Abort()
 			return
@@ -35,7 +43,7 @@ func AuthMiddleware() gin.HandlerFunc {
 		// Verify the token
 		token, err := client.VerifyIDToken(context.Background(), idToken)
 		if err != nil {
-      log.Printf("Invalid Token: %v", err)
+			log.Printf("Invalid Token: %v", err)
 			c.JSON(http.StatusUnauthorized, gin.H{"error": "Invalid token"})
 			c.Abort()
 			return

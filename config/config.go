@@ -12,6 +12,7 @@ type AppConfig struct {
 	ServerPort      string
 	ExchangeRateKey string
 	SecretKey       string
+	Env             string
 }
 
 var Config AppConfig
@@ -26,6 +27,7 @@ func Load() {
 	Config.ExchangeRateKey = getEnv("EXCHANGE_RATE_KEY", "")
 	Config.SqlDb = getEnv("SQL_URL", "")
 	Config.SecretKey = getEnv("SECRET_KEY", "")
+	Config.Env = getEnv("DEV", "false")
 }
 
 func GetServerPort() string {
@@ -38,6 +40,10 @@ func GetExchangeRateKey() string {
 
 func GetSqlDb() string {
 	return Config.SqlDb
+}
+
+func GetEnv() string {
+	return Config.Env
 }
 
 func GetSecretKey() string {

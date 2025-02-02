@@ -2,7 +2,6 @@ package controller
 
 import (
 	"net/http"
-	"strconv"
 
 	"guilliman/internal/models"
 	"guilliman/internal/utils"
@@ -18,9 +17,8 @@ func (h *Controller) GetSavingsController(c *gin.Context) {
 	}
 
 	accountParam := c.Query("account")
-	accountId, _ := strconv.Atoi(accountParam)
 
-	expenses, err := models.GetTransactions(models.TransactionTypeSavings, accountId, uid)
+	expenses, err := models.GetTransactions(models.TransactionTypeSavings, accountParam, uid)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return

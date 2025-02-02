@@ -1,0 +1,37 @@
+version: "3.8"
+services:
+  postgres:
+    image: postgres:15
+    container_name: guilliman_postgres
+    restart: always
+    environment:
+      POSTGRES_USER: guilliman
+      POSTGRES_PASSWORD: secretpassword
+      POSTGRES_DB: guilliman_db
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+  app:
+    build:
+      context: .
+      # Correct the path to your Dockerfile
+      dockerfile: Dockerfile.dev
+    ports:
+      - 8080:8080
+    # Important to bind/mount your codebase dir to /app dir for live reload
+    volumes:
+      - ./:/app
+    command: ["air", "-c", ".air.toml"]
+    container_name: guilliman_app
+    depends_on:
+      - postgres
+    environment:
+      DEV: "true"
+      EXCHANGE_RATE_API_KEY: ""
+      GIN_MODE: "debug"
+      GOOGLE_APPLICATION_CREDENTIALS: "./firebase-key.json"
+      DATABASE_URL: postgres://guilliman:secretpassword@postgres:5432/guilliman_db?sslmode=disable
+
+volumes:
+  postgres_data:

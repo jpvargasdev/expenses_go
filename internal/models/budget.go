@@ -1,10 +1,13 @@
 package models
 
 import (
+	"context"
 	"fmt"
 	"guilliman/internal/utils/timeutils"
+	"time"
 )
 
+// BudgetSummary struct
 type BudgetSummary struct {
 	TotalIncome       float64 `json:"total_income"`
 	TotalExpenses     float64 `json:"total_expenses"`
@@ -21,7 +24,11 @@ type BudgetSummary struct {
 	NetWorth          float64 `json:"net_worth"`
 }
 
+// GetBudgetSummary retrieves the budget summary based on a salary period
 func GetBudgetSummary(startDay string, endDay string) (BudgetSummary, error) {
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+
 	var summary BudgetSummary
 	var start, end int64
 
@@ -30,49 +37,44 @@ func GetBudgetSummary(startDay string, endDay string) (BudgetSummary, error) {
 	end = endDate.Unix()
 
 	// Fetch total income
-	err := db.QueryRow(`
+	err := db.QueryRow(ctx, `
         SELECT COALESCE(SUM(amount), 0) 
         FROM transactions
         WHERE transaction_type = 'Income' 
-          AND date BETWEEN ? AND ?`,
-		start, end).Scan(&summary.TotalIncome)
+          AND date BETWEEN $1 AND $2`, start, end).Scan(&summary.TotalIncome)
 	if err != nil {
 		return summary, fmt.Errorf("failed to retrieve total income: %v", err)
 	}
 
 	// Fetch total expenses
-	err = db.QueryRow(`
+	err = db.QueryRow(ctx, `
         SELECT COALESCE(SUM(amount), 0) 
         FROM transactions
         WHERE transaction_type = 'Expense' 
-          AND date BETWEEN ? AND ?`,
-		start, end).Scan(&summary.TotalExpenses)
+          AND date BETWEEN $1 AND $2`, start, end).Scan(&summary.TotalExpenses)
 	if err != nil {
 		return summary, fmt.Errorf("failed to retrieve total expenses: %v", err)
 	}
-	// Convert expenses to a positive number (since stored as negative)
+	// Convert expenses to a positive number
 	summary.TotalExpenses = -summary.TotalExpenses
 
 	// Calculate net balance
 	summary.NetBalance = summary.TotalIncome - summary.TotalExpenses
 
 	// Calculate net worth: sum of all account balances
-	err = db.QueryRow(`
-        SELECT COALESCE(SUM(balance), 0) 
-        FROM accounts`,
-	).Scan(&summary.NetWorth)
+	err = db.QueryRow(ctx, `
+        SELECT COALESCE(SUM(balance), 0) FROM accounts`).Scan(&summary.NetWorth)
 	if err != nil {
 		return summary, fmt.Errorf("failed to retrieve net worth: %v", err)
 	}
 
 	// Fetch total expenses grouped by main_category
-	rows, err := db.Query(`
+	rows, err := db.Query(ctx, `
         SELECT main_category, COALESCE(SUM(amount), 0) 
         FROM transactions
         WHERE transaction_type = 'Expense' 
-          AND date BETWEEN ? AND ?
-        GROUP BY main_category`,
-		start, end)
+          AND date BETWEEN $1 AND $2
+        GROUP BY main_category`, start, end)
 	if err != nil {
 		return summary, fmt.Errorf("failed to retrieve expenses: %v", err)
 	}
@@ -87,7 +89,7 @@ func GetBudgetSummary(startDay string, endDay string) (BudgetSummary, error) {
 			return summary, fmt.Errorf("failed to scan expense row: %v", err)
 		}
 
-		amount = -amount // convert negative to positive expense
+		amount = -amount // Convert negative to positive expense
 
 		switch mainCategory {
 		case "Needs":

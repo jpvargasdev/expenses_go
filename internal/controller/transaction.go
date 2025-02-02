@@ -83,7 +83,6 @@ func (h *Controller) GetTransactionsController(c *gin.Context) {
 
 	typeParam := c.Query("type")
 	accountParam := c.Query("account")
-	accountId, _ := strconv.Atoi(accountParam)
 
 	// check transaction type is valid or empty
 	if typeParam != models.TransactionTypeExpense &&
@@ -95,7 +94,7 @@ func (h *Controller) GetTransactionsController(c *gin.Context) {
 		return
 	}
 
-	transactions, err := models.GetTransactions(typeParam, accountId, uid)
+	transactions, err := models.GetTransactions(typeParam, accountParam, uid)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
@@ -110,12 +109,7 @@ func (h *Controller) GetTransactionByIdController(c *gin.Context) {
 		return
 	}
 
-	idParam := c.Param("id")
-	id, err := strconv.Atoi(idParam)
-	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid transaction ID"})
-		return
-	}
+	id := c.Param("id")
 
 	transaction, err := models.GetTransactionByID(id, uid)
 	if err != nil {
@@ -130,7 +124,7 @@ func (h *Controller) GetTransactionByIdController(c *gin.Context) {
 }
 
 func (h *Controller) AddTransactionController(c *gin.Context) {
-  uid, err := utils.GetUserUID(c)
+	uid, err := utils.GetUserUID(c)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
@@ -142,7 +136,7 @@ func (h *Controller) AddTransactionController(c *gin.Context) {
 		return
 	}
 
-  newTransaction.UserID = uid
+	newTransaction.UserID = uid
 
 	transaction, err := models.AddTransaction(newTransaction)
 	if err != nil {
@@ -155,13 +149,8 @@ func (h *Controller) AddTransactionController(c *gin.Context) {
 
 func (h *Controller) DeleteTransactionController(c *gin.Context) {
 	idParam := c.Param("id")
-	id, err := strconv.Atoi(idParam)
-	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid transaction ID"})
-		return
-	}
 
-	err = models.DeleteTransaction(id)
+	err := models.DeleteTransaction(idParam)
 	if err != nil {
 		if err == sql.ErrNoRows {
 			c.JSON(http.StatusNotFound, gin.H{"error": "Transaction not found"})
@@ -184,7 +173,6 @@ func (h *Controller) GetTransactionsForPeriodController(c *gin.Context) {
 	dateParam := c.Query("date")
 	typeParam := c.Query("type")
 	accountParam := c.Query("account")
-	accountId, _ := strconv.Atoi(accountParam)
 
 	// check transaction type is valid or empty
 	if typeParam != models.TransactionTypeExpense &&
@@ -210,7 +198,7 @@ func (h *Controller) GetTransactionsForPeriodController(c *gin.Context) {
 
 	startTimestamp, endTimestamp := timeutils.CalculatePeriodBoundaries(date)
 
-	expenses, err := models.GetTransactionsForPeriod(startTimestamp, endTimestamp, typeParam, accountId, uid)
+	expenses, err := models.GetTransactionsForPeriod(startTimestamp, endTimestamp, typeParam, accountParam, uid)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
@@ -228,7 +216,6 @@ func (h *Controller) GetTransactionsMonthlyController(c *gin.Context) {
 
 	typeParam := c.Query("type")
 	accountParam := c.Query("account")
-	accountId, _ := strconv.Atoi(accountParam)
 	startDay := c.Query("start_day")
 	endDay := c.Query("end_day")
 
@@ -246,7 +233,7 @@ func (h *Controller) GetTransactionsMonthlyController(c *gin.Context) {
 	startTimestamp := startDate.Unix()
 	endTimestamp := endDate.Unix()
 
-	expenses, err := models.GetTransactionsForPeriod(startTimestamp, endTimestamp, typeParam, accountId, uid)
+	expenses, err := models.GetTransactionsForPeriod(startTimestamp, endTimestamp, typeParam, accountParam, uid)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return

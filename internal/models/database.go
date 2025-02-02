@@ -1,11 +1,14 @@
 package models
 
 import (
-	"database/sql"
+	"context"
+	"fmt"
 	"log"
 	"os"
+	"time"
 
-	_ "github.com/mattn/go-sqlite3"
+	"github.com/jackc/pgx/v5"
+	"github.com/jackc/pgx/v5/pgxpool"
 )
 
 type CategorySeed struct {
@@ -31,6 +34,7 @@ var initialCategories = []CategorySeed{
 	{"Utilities", "Needs"},
 	{"Transportation", "Needs"},
 	{"Work Lunchs", "Needs"},
+	{"Family Support", "Needs"},
 
 	{"Streaming Services", "Wants"},
 	{"Health", "Wants"},
@@ -48,171 +52,151 @@ var initialCategories = []CategorySeed{
 	{"Payments", "Income"},
 }
 
-var db *sql.DB
+var db *pgxpool.Pool
 
 func InitializeDatabase() {
-	// Check for the development mode using the DEV environment variable
-	devMode := os.Getenv("DEV") == "true"
+	dsn := os.Getenv("DATABASE_URL") // Example: "postgres://user:password@localhost:5432/dbname?sslmode=disable"
 
-	// Set database path based on the mode
-	databasePath := "/data/database.db"
-	if devMode {
-		databasePath = "./dev_database.db"
-		log.Println("Running in development mode. Using local database:", databasePath)
-	} else {
-		// Ensure the /data directory exists in production mode
-		dataDir := "/data"
-		err := os.MkdirAll(dataDir, os.ModePerm)
-		if err != nil {
-			log.Fatalf("Failed to create data directory: %v", err)
-		}
-		log.Println("Running in production mode.")
-	}
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
 
-	// Open the SQLite database
 	var err error
-	db, err = sql.Open("sqlite3", databasePath)
+	db, err = pgxpool.New(ctx, dsn)
 	if err != nil {
-		log.Fatalf("Failed to open SQLite database: %v", err)
+		log.Fatalf("Failed to connect to PostgreSQL: %v", err)
 	}
 
-	// Test the database connection
-	err = db.Ping()
-	if err != nil {
-		log.Fatalf("Failed to connect to SQLite database: %v", err)
-	}
-
-	log.Printf("Connected to SQLite database at %s", databasePath)
+	log.Println("Connected to PostgreSQL")
 }
 
-func SeedCategories() error {
-	// Check if the table already has data
-	var count int
-	err := db.QueryRow("SELECT COUNT(*) FROM categories").Scan(&count)
-	if err != nil && err != sql.ErrNoRows {
-		return err
-	}
-
-	// If there are already entries in the categories table, skip seeding
-	if count > 0 {
-		log.Println("Categories table already populated, skipping seeding")
-		return nil
-	}
-
-	// Insert initial categories
-	for _, category := range initialCategories {
-		_, err := db.Exec("INSERT INTO categories (name, main_category) VALUES (?, ?)", category.Name, category.MainCategory)
-		if err != nil {
-			return err
-		}
-	}
-
-	log.Println("Categories table successfully seeded")
-	return nil
-}
-
+// CreateTables creates the necessary tables if they don't exist
 func CreateTables() error {
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+
 	categoryTable := `CREATE TABLE IF NOT EXISTS categories (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    name TEXT UNIQUE NOT NULL,         -- Name of the subcategory
-    main_category TEXT NOT NULL,       -- Main category (Needs, Wants, Savings, Transfer)
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP, -- Timestamp when the category was created
-    FOREIGN KEY (user_id) REFERENCES users(id)
-  );`
+		id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+		created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+		name TEXT UNIQUE NOT NULL,        
+		main_category TEXT NOT NULL,
+		user_id UUID REFERENCES users(id) ON DELETE CASCADE
+	);`
 
 	transactionsTable := `CREATE TABLE IF NOT EXISTS transactions (
-		id INTEGER PRIMARY KEY AUTOINCREMENT,
+		id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+		created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
 		description TEXT NOT NULL,
-		amount REAL NOT NULL,                        -- Positive for income, negative for expenses
+		amount REAL NOT NULL,                       
 		currency TEXT NOT NULL,
 		amount_in_base_currency REAL,
 		exchange_rate REAL,
 		date INTEGER NOT NULL,
-		main_category TEXT NOT NULL,                 -- Needs, Wants, Savings
-		subcategory TEXT NOT NULL,                   -- Name of the subcategory
-		category_id INTEGER,
-    user_id TEXT,                             -- User from which the transaction is made
-		account_id INTEGER,                          -- Account from which the transaction is made
-		related_account_id INTEGER,                  -- Account to which the transaction is made (for transfers)
-		transaction_type TEXT NOT NULL,              -- 'Expense', 'Income', 'Savings', 'Transfer'
-		fees INTEGER DEFAULT 0,                      -- Fees associated with the transaction
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-		FOREIGN KEY (category_id) REFERENCES categories(id),
-		FOREIGN KEY (account_id) REFERENCES accounts(id),
-		FOREIGN KEY (related_account_id) REFERENCES accounts(id),
-    FOREIGN KEY (user_id) REFERENCES users(id)
+		main_category TEXT NOT NULL,
+		subcategory TEXT NOT NULL,
+		category_id UUID REFERENCES categories(id) ON DELETE SET NULL,
+		account_id UUID REFERENCES accounts(id) ON DELETE CASCADE,
+		related_account_id UUID REFERENCES accounts(id) ON DELETE SET NULL,
+		transaction_type TEXT NOT NULL,             
+		fees REAL DEFAULT 0,
+		user_id UUID REFERENCES users(id) ON DELETE CASCADE
 	);`
 
 	accountsTable := `CREATE TABLE IF NOT EXISTS accounts (
-		id INTEGER PRIMARY KEY AUTOINCREMENT,
-		name TEXT UNIQUE NOT NULL,   -- Name of the account (e.g., "Checking Account", "Credit Card")
-		type TEXT NOT NULL,          -- Type of account (e.g., "Bank", "Credit Card", "Cash")
-		currency TEXT NOT NULL,      -- Currency of the account (e.g., "USD", "EUR")
-		balance REAL DEFAULT 0,      -- Current balance of the account (optional)
-    user_id TEXT,             -- User who owns the account
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    FOREIGN KEY (user_id) REFERENCES users(id)
+		id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+		created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+		name TEXT UNIQUE NOT NULL,   
+		type TEXT NOT NULL,          
+		currency TEXT NOT NULL,      
+		balance REAL DEFAULT 0,      
+		user_id UUID REFERENCES users(id) ON DELETE CASCADE
 	);`
 
 	userTable := `CREATE TABLE IF NOT EXISTS users (
-    id TEXT,
-    email TEXT,
-    display_name TEXT,
-    phone_number TEXT,
-    photo_url TEXT,
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-  )`
+		id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+		created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+		email TEXT NOT NULL UNIQUE,
+		photo_url TEXT NOT NULL,
+    phone_number TEXT NOT NULL,
+    display_name TEXT NOT NULL
+	);`
 
-	_, err := db.Exec(categoryTable)
-	if err != nil {
-		log.Fatalf("Failed to create categories table: %v", err)
-		return err
-	}
+	migrationTable := `CREATE TABLE IF NOT EXISTS migrations (
+		id SERIAL PRIMARY KEY,
+		name TEXT NOT NULL UNIQUE,
+		applied_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+	);`
 
-	_, err = db.Exec(transactionsTable)
-	if err != nil {
-		log.Fatalf("Failed to create transactions table: %v", err)
-		return err
-	}
+	tableStatements := []string{userTable, accountsTable, categoryTable, transactionsTable, migrationTable}
 
-	_, err = db.Exec(accountsTable)
-	if err != nil {
-		log.Fatalf("Failed to create accounts table: %v", err)
-		return err
-	}
-
-	_, err = db.Exec(userTable)
-	if err != nil {
-		log.Fatalf("Failed to create users table :%v", err)
-		return err
+	for _, stmt := range tableStatements {
+		_, err := db.Exec(ctx, stmt)
+		if err != nil {
+			log.Printf("Failed to create table: %v", err)
+			return err
+		}
 	}
 
 	log.Println("Tables created successfully")
 	return nil
 }
 
+// **SeedCategories: Adds default categories to the database if not present**
+func SeedCategories() error {
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+
+	// Check if categories already exist
+	var count int
+	err := db.QueryRow(ctx, "SELECT COUNT(*) FROM categories").Scan(&count)
+	if err != nil {
+		return fmt.Errorf("failed to check categories count: %w", err)
+	}
+
+	// Skip seeding if categories exist
+	if count > 0 {
+		log.Println("✅ Categories already exist, skipping seed.")
+		return nil
+	}
+
+	log.Println("🌱 Seeding categories into database...")
+
+	// Use batch processing for efficiency
+	batch := &pgx.Batch{}
+	for _, category := range initialCategories {
+		batch.Queue("INSERT INTO categories (name, main_category) VALUES ($1, $2) ON CONFLICT DO NOTHING",
+			category.Name, category.MainCategory)
+	}
+
+	// Execute batch insert
+	br := db.SendBatch(ctx, batch)
+	defer br.Close()
+
+	for range initialCategories {
+		_, err := br.Exec()
+		if err != nil {
+			return fmt.Errorf("failed to insert category: %w", err)
+		}
+	}
+
+	log.Println("✅ Categories successfully seeded.")
+	return nil
+}
+
+// CloseDatabase closes the database connection
 func CloseDatabase() {
 	if db != nil {
 		db.Close()
 	}
 }
 
+// ClearDatabase removes all data from tables
 func ClearDatabase() error {
-	_, err := db.Exec("DELETE FROM accounts")
-	if err != nil {
-		log.Printf("Error clearing accounts table: %v", err)
-		return err
-	}
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
 
-	_, err = db.Exec("DELETE FROM categories")
+	_, err := db.Exec(ctx, "TRUNCATE accounts, categories, transactions RESTART IDENTITY CASCADE;")
 	if err != nil {
-		log.Printf("Error clearing categories table: %v", err)
-		return err
-	}
-
-	_, err = db.Exec("DELETE FROM transactions")
-	if err != nil {
-		log.Printf("Error clearing transactions table: %v", err)
+		log.Printf("Error clearing database: %v", err)
 		return err
 	}
 

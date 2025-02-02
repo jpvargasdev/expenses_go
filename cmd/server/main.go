@@ -28,6 +28,7 @@ import (
 // @securityDefinitions.basic  BasicAuth
 
 // @externalDocs.description  OpenAPI
+
 func main() {
 	config.Load()
 

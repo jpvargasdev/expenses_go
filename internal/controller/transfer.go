@@ -2,7 +2,6 @@ package controller
 
 import (
 	"net/http"
-	"strconv"
 
 	"guilliman/internal/models"
 	"guilliman/internal/utils"
@@ -17,10 +16,9 @@ func (h *Controller) GetTransfersController(c *gin.Context) {
 		return
 	}
 
-	accountParam := c.Query("account")
-	accountId, _ := strconv.Atoi(accountParam)
+	id := c.Query("account")
 
-	expenses, err := models.GetTransactions(models.TransactionTypeTransfer, accountId, uid)
+	expenses, err := models.GetTransactions(models.TransactionTypeTransfer, id, uid)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
@@ -29,14 +27,22 @@ func (h *Controller) GetTransfersController(c *gin.Context) {
 }
 
 func (h *Controller) TransferFundsController(c *gin.Context) {
+	uid, err := utils.GetUserUID(c)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
 	var transfer models.Transaction
 	if err := c.ShouldBindJSON(&transfer); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
 
+	transfer.UserID = uid
+
 	// Validate required fields
-	if transfer.AccountID == 0 || transfer.RelatedAccountID == 0 {
+	if !transfer.AccountID.Valid || !transfer.RelatedAccountID.Valid {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Both source and destination accounts are required"})
 		return
 	}
