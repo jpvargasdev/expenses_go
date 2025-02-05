@@ -15,7 +15,7 @@ func AuthMiddleware() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		// if environment DEV === true, then return c.Next()
 		if config.GetEnv() == "true" {
-			c.Set("userUID", "550e8400-e29b-41d4-a716-446655440000")
+			c.Set("userUID", "mIoRdjhL5fgS96SzflW2lkEQC1W2")
 			c.Next()
 			return
 		}

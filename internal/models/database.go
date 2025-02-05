@@ -79,7 +79,7 @@ func CreateTables() error {
 		created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
 		name TEXT UNIQUE NOT NULL,        
 		main_category TEXT NOT NULL,
-		user_id UUID REFERENCES users(id) ON DELETE CASCADE
+		user_id TEXT REFERENCES users(id) ON DELETE CASCADE
 	);`
 
 	transactionsTable := `CREATE TABLE IF NOT EXISTS transactions (
@@ -98,7 +98,7 @@ func CreateTables() error {
 		related_account_id UUID REFERENCES accounts(id) ON DELETE SET NULL,
 		transaction_type TEXT NOT NULL,             
 		fees REAL DEFAULT 0,
-		user_id UUID REFERENCES users(id) ON DELETE CASCADE
+		user_id TEXT REFERENCES users(id) ON DELETE CASCADE
 	);`
 
 	accountsTable := `CREATE TABLE IF NOT EXISTS accounts (
@@ -108,16 +108,16 @@ func CreateTables() error {
 		type TEXT NOT NULL,          
 		currency TEXT NOT NULL,      
 		balance REAL DEFAULT 0,      
-		user_id UUID REFERENCES users(id) ON DELETE CASCADE
+		user_id TEXT REFERENCES users(id) ON DELETE CASCADE
 	);`
 
 	userTable := `CREATE TABLE IF NOT EXISTS users (
-		id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+		id TEXT PRIMARY KEY,
 		created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
 		email TEXT NOT NULL UNIQUE,
 		photo_url TEXT NOT NULL,
-    phone_number TEXT NOT NULL,
-    display_name TEXT NOT NULL
+		phone_number TEXT NOT NULL,
+		display_name TEXT NOT NULL
 	);`
 
 	migrationTable := `CREATE TABLE IF NOT EXISTS migrations (
