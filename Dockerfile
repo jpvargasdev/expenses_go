@@ -18,6 +18,8 @@ RUN go build -o guilliman cmd/server/main.go
 # Stage 2: Create a lightweight runtime image
 FROM golang:1.23-alpine
 
+RUN apk add --no-cache jq
+
 WORKDIR /app
 
 # Copy the compiled Go binary and required files
