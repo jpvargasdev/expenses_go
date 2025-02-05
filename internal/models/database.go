@@ -194,7 +194,7 @@ func ClearDatabase() error {
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 
-	_, err := db.Exec(ctx, "TRUNCATE accounts, categories, transactions RESTART IDENTITY CASCADE;")
+	_, err := db.Exec(ctx, "TRUNCATE accounts, transactions RESTART IDENTITY CASCADE;")
 	if err != nil {
 		log.Printf("Error clearing database: %v", err)
 		return err
