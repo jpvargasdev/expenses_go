@@ -83,18 +83,9 @@ func (h *Controller) GetTransactionsController(c *gin.Context) {
 
 	typeParam := c.Query("type")
 	accountParam := c.Query("account")
+	limitParam := c.Query("limit")
 
-	// check transaction type is valid or empty
-	if typeParam != models.TransactionTypeExpense &&
-		typeParam != models.TransactionTypeIncome &&
-		typeParam != models.TransactionTypeSavings &&
-		typeParam != models.TransactionTypeTransfer &&
-		typeParam != "" {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid transaction type"})
-		return
-	}
-
-	transactions, err := models.GetTransactions(typeParam, accountParam, uid)
+	transactions, err := models.GetTransactions(typeParam, accountParam, limitParam, uid)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return

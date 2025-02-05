@@ -18,7 +18,7 @@ func (h *Controller) GetSavingsController(c *gin.Context) {
 
 	accountParam := c.Query("account")
 
-	expenses, err := models.GetTransactions(models.TransactionTypeSavings, accountParam, uid)
+	expenses, err := models.GetTransactions(models.TransactionTypeSavings, accountParam, "", uid)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return

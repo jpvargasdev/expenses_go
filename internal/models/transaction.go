@@ -7,6 +7,7 @@ import (
 	"guilliman/internal/utils"
 	"guilliman/internal/utils/timeutils"
 	"log"
+	"strconv"
 	"strings"
 	"time"
 
@@ -159,7 +160,7 @@ func GetTransactionByID(transactionID string, userID string) (Transaction, error
 	return transaction, nil
 }
 
-func GetTransactions(transactionType string, accountId string, uid string) ([]Transaction, error) {
+func GetTransactions(transactionType string, accountId string, limitParam string, uid string) ([]Transaction, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 
@@ -182,25 +183,38 @@ func GetTransactions(transactionType string, accountId string, uid string) ([]Tr
 	var conditions []string
 	var args []interface{}
 
+	// Always filter by user_id
 	conditions = append(conditions, "user_id = $1")
 	args = append(args, uid)
+	argIndex := 2 // Track query argument numbers
 
 	if transactionType != "" {
-		conditions = append(conditions, "transaction_type = $2")
+		conditions = append(conditions, fmt.Sprintf("transaction_type = $%d", argIndex))
 		args = append(args, transactionType)
+		argIndex++
 	}
 
 	if accountId != "" {
-		conditions = append(conditions, "account_id = $3")
+		conditions = append(conditions, fmt.Sprintf("account_id = $%d", argIndex))
 		args = append(args, accountId)
+		argIndex++
 	}
 
 	if len(conditions) > 0 {
 		query += " WHERE " + strings.Join(conditions, " AND ")
 	}
 
-	rows, err := db.Query(ctx, query, args...)
+	query += " ORDER BY date DESC" // Ensure newest transactions are retrieved first
 
+	if limitParam != "" {
+		_, err := strconv.Atoi(limitParam)
+		if err == nil { // Ensure limit is a valid integer
+			query += fmt.Sprintf(" LIMIT $%d", argIndex)
+			args = append(args, limitParam)
+		}
+	}
+
+	rows, err := db.Query(ctx, query, args...)
 	if err != nil {
 		return nil, err
 	}

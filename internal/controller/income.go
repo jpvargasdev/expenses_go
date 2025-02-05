@@ -18,7 +18,7 @@ func (h *Controller) GetIncomesController(c *gin.Context) {
 
 	accountParam := c.Query("account")
 
-	incomes, err := models.GetTransactions(models.TransactionTypeIncome, accountParam, uid)
+	incomes, err := models.GetTransactions(models.TransactionTypeIncome, accountParam, "", uid)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
