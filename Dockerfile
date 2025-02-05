@@ -5,12 +5,6 @@ LABEL maintainer="Juan Vargas <vargasm.jp@gmail.com>"
 
 WORKDIR /app
 
-ENV CGO_ENABLED=1
-ENV GOOS=linux
-
-# Install build dependencies
-RUN apk add --no-cache gcc musl-dev sqlite-dev
-
 # Copy dependency files and download Go modules
 COPY go.mod go.sum ./
 RUN go mod download
@@ -22,15 +16,9 @@ COPY . .
 RUN go build -o guilliman cmd/server/main.go
 
 # Stage 2: Create a lightweight runtime image
-FROM python:3.7-alpine3.17
+FROM golang:1.23-alpine
 
 WORKDIR /app
-
-# Install runtime dependencies
-RUN apk add --no-cache ca-certificates musl sqlite jq
-
-# Install Python dependencies
-RUN pip install gevent sqlite_web
 
 # Copy the compiled Go binary and required files
 COPY --from=builder /app/guilliman .
