@@ -27,7 +27,7 @@ func Load() {
 	Config.ExchangeRateKey = getEnv("EXCHANGE_RATE_KEY", "")
 	Config.SqlDb = getEnv("SQL_URL", "")
 	Config.SecretKey = getEnv("SECRET_KEY", "")
-	Config.Env = getEnv("DEV", "false")
+	Config.Env = getEnv("ENV", "debug")
 }
 
 func GetServerPort() string {

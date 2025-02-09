@@ -656,7 +656,7 @@ func AddTransfer(transaction Transaction) (Transaction, error) {
 
 	// Update the account balance for the source account
 	_, err = tx.Exec(ctx,
-		`UPDATE accounts SET balance = balance - ($1 + $2) WHERE id = $3`,
+    `UPDATE accounts SET balance = balance - ($1::NUMERIC + $2::NUMERIC) WHERE id = $3`,
 		transaction.Amount, transaction.Fees, transaction.AccountID,
 	)
 
@@ -667,7 +667,7 @@ func AddTransfer(transaction Transaction) (Transaction, error) {
 
 	// Update the account balance for the destination account
 	_, err = tx.Exec(ctx,
-		`UPDATE accounts SET balance = balance + ($1 + $2) WHERE id = $3`,
+    `UPDATE accounts SET balance = balance + ($1::NUMERIC + $2::NUMERIC) WHERE id = $3`,
 		transaction.Amount, transaction.Fees, transaction.RelatedAccountID,
 	)
 

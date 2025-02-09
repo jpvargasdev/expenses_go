@@ -39,6 +39,11 @@ func (h *Controller) TransferFundsController(c *gin.Context) {
 		return
 	}
 
+  if transfer.AccountID == transfer.RelatedAccountID {
+    c.JSON(http.StatusBadRequest, gin.H{"error": "Source and destination accounts cannot be the same"})
+    return
+  }
+
 	transfer.UserID = uid
 
 	// Validate required fields

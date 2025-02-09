@@ -27,7 +27,7 @@ services:
     depends_on:
       - postgres
     environment:
-      DEV: "true"
+      ENV: "debug"
       EXCHANGE_RATE_API_KEY: ""
       GIN_MODE: "debug"
       GOOGLE_APPLICATION_CREDENTIALS: "./firebase-key.json"
