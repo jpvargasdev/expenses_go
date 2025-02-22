@@ -69,8 +69,8 @@ func SetupRouter() *gin.Engine {
 			// user.POST("/delete", c.DeleteUserController)
 		}
 	}
-	// Health
-	// r.GET("/health", c.HealthCheckController)
+  //	Health
+	r.GET("/health", c.HealthCheckController)
 
 	// Swagger
 	r.GET("/swagger/*any", ginSwagger.WrapHandler(swaggerFiles.Handler))
