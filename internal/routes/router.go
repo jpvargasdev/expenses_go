@@ -35,7 +35,7 @@ func SetupRouter() *gin.Engine {
 			transactions.GET("/:id", c.GetTransactionByIdController)
 			transactions.POST("", c.AddTransactionController)
 			transactions.PUT("/:id", c.UpdateTransactionController)
-			transactions.DELETE(":id", c.DeleteTransactionController)
+			transactions.DELETE("/:id", c.DeleteTransactionController)
 
 			// Transaccions by type
 			transactions.GET("/expenses", c.GetExpensesController)                        // Tipo 'Expense'

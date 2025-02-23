@@ -702,13 +702,9 @@ func DeleteTransaction(id string) error {
 	}()
 
 	// Fetch the transaction details to retrieve its amount and account ID
-	var transaction struct {
-		Amount           float64
-		AccountID        string
-		RelatedAccountID string // For transfers
-		TransactionType  string
-		Fees             int
-	}
+	var transaction Transaction 
+
+  log.Printf("Transaction ID: %s", id)
 
 	err = tx.QueryRow(ctx,
 		`SELECT amount, account_id, related_account_id, transaction_type, fees
@@ -722,6 +718,10 @@ func DeleteTransaction(id string) error {
 		&transaction.Fees,
 	)
 
+  if err != nil {
+    return fmt.Errorf("Error retrieving transaction: %v", err)
+  }
+
 	if err == sql.ErrNoRows {
 		tx.Rollback(ctx)
 		return fmt.Errorf("transaction with ID %d not found", id)
@@ -730,9 +730,11 @@ func DeleteTransaction(id string) error {
 		return fmt.Errorf("failed to retrieve transaction: %v", err)
 	}
 
+  log.Printf("Transaction ID 2: %s", id)
+
 	// Reverse the balance change for the source account
 	_, err = tx.Exec(ctx,
-		`UPDATE accounts SET balance = balance + ($1 + $2) WHERE id = $3`,
+    `UPDATE accounts SET balance = balance + ($1::NUMERIC + $2::NUMERIC) WHERE id = $3`,
 		transaction.Amount, transaction.Fees, transaction.AccountID,
 	)
 	if err != nil {
@@ -743,9 +745,9 @@ func DeleteTransaction(id string) error {
 	// If the transaction is a transfer, update the related account balance as well
 	if transaction.TransactionType == TransactionTypeTransfer ||
 		transaction.TransactionType == TransactionTypeSavings &&
-			transaction.RelatedAccountID != "" {
+		transaction.RelatedAccountID.Valid && transaction.RelatedAccountID.String != "" {
 		_, err = tx.Exec(ctx,
-			`UPDATE accounts SET balance = balance - ($1 + $2) WHERE id = $3`,
+      `UPDATE accounts SET balance = balance - ($1::NUMERIC + $2::NUMERIC) WHERE id = $3`,
 			transaction.Amount, transaction.Fees, transaction.RelatedAccountID,
 		)
 		if err != nil {
